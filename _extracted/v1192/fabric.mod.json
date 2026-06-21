@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 1,
+  "id": "sittingplus",
+  "version": "2.0.6",
+  "name": "sittingplus",
+  "description": "",
+  "authors": [],
+  "contact": {},
+  "license": "All-Rights-Reserved",
+  "icon": "assets/sittingplus/icon.png",
+  "environment": "*",
+  "entrypoints": {
+    "fabric-datagen": [
+      "com.saltywater.sittingplus.client.SittingPlusDataGenerator"
+    ],
+    "client": [
+      "com.saltywater.sittingplus.SittingPlusClient"
+    ],
+    "main": [
+      "com.saltywater.sittingplus.SittingPlus"
+    ]
+  },
+  "mixins": [
+    "sittingplus.mixins.json"
+  ],
+  "depends": {
+    "fabricloader": ">=0.16.14",
+    "fabric": "*",
+    "minecraft": "1.19.2"
+  }
+}
