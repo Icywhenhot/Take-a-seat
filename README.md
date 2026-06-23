@@ -1,11 +1,12 @@
-# Seatify
+# Take a Seat
 
-Sit, lounge, and relax. Press a key and Seatify plays a **context-aware sitting animation** on your
+Sit, lounge, and relax. Press a key and Take a Seat plays a **context-aware sitting animation** on your
 player — it figures out *what* you're near or holding and picks a fitting pose, then keeps your model
 in frame with a smooth camera. Other players see you sitting too (when they also have the mod).
 
-Seatify is a from-scratch rebuild of the discontinued **Sitting Plus** for Minecraft **26.1.2**, running
-on the [Player Animation Library](https://modrinth.com/mod/player-animation-library) backend.
+Take a Seat is a from-scratch rebuild of the discontinued **Sitting Plus** for Minecraft **26.1.2**, running
+on the [Player Animation Library](https://modrinth.com/mod/player-animation-library) backend and ported to
+NeoForge.
 
 > These are *cosmetic* animations. You don't actually mount the block — your model poses in place, and
 > moving stands you back up.
@@ -16,25 +17,23 @@ on the [Player Animation Library](https://modrinth.com/mod/player-animation-libr
 
 | Mod | Version |
 |---|---|
-| Minecraft | 26.1.2 (Fabric) |
-| Fabric Loader | 0.19.3+ |
-| Fabric API | latest for 26.1.2 |
-| Player Animation Library | 1.2.3+mc.26.1 (Fabric) |
+| Minecraft | 26.1.2 |
+| NeoForge | 26.1.2.76+ |
+| Player Animation Library | bundled in this port |
 
 ---
 
 ## How to use
 
-- Press **`X`** (rebindable in *Options → Controls → Seatify*) to sit.
+- Press **`X`** (rebindable in *Options → Controls → Take a Seat*) to sit.
 - **Press it again while seated** to cycle to the next variation of the current pose.
 - **Move** (WASD / jump / sneak / sprint) to stand back up.
 - **Right-click a stair with an empty hand** to snap onto it and sit (can be disabled in the config).
-- Or use the **`/sit`** command: `/sit` (context detection), `/sit <pose>` to force a pose (e.g. `/sit chair`), or `/sit <pose> <variant>` (e.g. `/sit bed 2`).
 - You **can't sit while airborne, swimming/underwater, or riding** something.
 
 ### How the pose is chosen
 
-When you press the key, Seatify checks these in order and uses the **first** match:
+When you press the key, Take a Seat checks these in order and uses the **first** match:
 
 | Priority | Trigger | Pose (animation variants) | Notes |
 |---:|---|---|---|
@@ -73,7 +72,9 @@ That's **20 hand-made animations** in total, cycled per category by tapping the 
 
 ## Configuration
 
-Edit `config/SeatifyConfig.json` (created on first launch):
+The old in-game config screen is not wired into this NeoForge port yet, so edit the JSON file directly.
+
+Edit `config/TakeASeatConfig.json` (created on first launch):
 
 | Option | Default | Description |
 |---|---|---|
@@ -89,8 +90,8 @@ Edit `config/SeatifyConfig.json` (created on first launch):
 
 ## Multiplayer
 
-Seatify syncs poses to other players: when you sit, your client tells the server, which relays it so
-everyone running Seatify mirrors your animation. The mod should be installed on the server and on each
+Take a Seat syncs poses to other players: when you sit, your client tells the server, which relays it so
+everyone running Take a Seat mirrors your animation. The mod should be installed on the server and on each
 client that wants to *see* the animations. Players who were **already sitting when you join** are synced
 to you automatically (no need for them to re-sit).
 
@@ -113,9 +114,9 @@ Bottom slabs and carpets are recognized automatically, so you only need the tag 
 ./gradlew build
 ```
 
-Requires a JDK that can target Java 25 (the project builds with JDK 26). The output jar lands in
-`build/libs/`. To test in-game: `./gradlew runClient` (Player Animation Library is pulled in automatically
-for the dev run).
+The mod sources target **Java 25** (Mojang ships Java 25 to players in 26.1.2); the Gradle build will
+auto-provision a JDK 25 toolchain via the foojay resolver if one isn't installed. The output jar lands
+in `build/libs/`. To test in-game: `./gradlew runClient`.
 
 ---
 

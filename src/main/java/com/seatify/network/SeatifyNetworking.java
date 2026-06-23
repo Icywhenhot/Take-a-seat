@@ -1,9 +1,6 @@
 package com.seatify.network;
 
 import com.seatify.Seatify;
-import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
-import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
-import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.core.UUIDUtil;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
@@ -11,6 +8,12 @@ import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
+import net.neoforged.neoforge.event.entity.player.PlayerEvent;
+import net.neoforged.neoforge.event.tick.ServerTickEvent;
+import net.neoforged.neoforge.network.PacketDistributor;
+import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
+import net.neoforged.neoforge.network.handling.IPayloadContext;
+import net.neoforged.neoforge.network.registration.PayloadRegistrar;
 
 import java.util.Map;
 import java.util.UUID;
@@ -58,44 +61,51 @@ public final class SeatifyNetworking {
 		}
 	}
 
-	public static void registerCommon() {
-		PayloadTypeRegistry.serverboundPlay().register(StartSitPayload.TYPE, StartSitPayload.CODEC);
-		PayloadTypeRegistry.clientboundPlay().register(StartSitPayload.TYPE, StartSitPayload.CODEC);
-		PayloadTypeRegistry.serverboundPlay().register(StopSitPayload.TYPE, StopSitPayload.CODEC);
-		PayloadTypeRegistry.clientboundPlay().register(StopSitPayload.TYPE, StopSitPayload.CODEC);
+	public static void registerPayloadHandlers(RegisterPayloadHandlersEvent event) {
+		PayloadRegistrar registrar = event.registrar("1");
+		registrar.playBidirectional(StartSitPayload.TYPE, StartSitPayload.CODEC, SeatifyNetworking::handleStartSit);
+		registrar.playBidirectional(StopSitPayload.TYPE, StopSitPayload.CODEC, SeatifyNetworking::handleStopSit);
+	}
 
-		ServerPlayNetworking.registerGlobalReceiver(StartSitPayload.TYPE, (payload, context) -> {
-			ServerPlayer sender = context.player();
-			MinecraftServer server = sender.level().getServer();
-			if (server == null) return;
-			SITTING.put(payload.playerUuid(), payload.animId());
-			server.execute(() -> {
-				for (ServerPlayer p : server.getPlayerList().getPlayers()) {
-					ServerPlayNetworking.send(p, payload);
-				}
-			});
-		});
-
-		ServerPlayNetworking.registerGlobalReceiver(StopSitPayload.TYPE, (payload, context) -> {
-			ServerPlayer sender = context.player();
-			MinecraftServer server = sender.level().getServer();
-			if (server == null) return;
-			SITTING.remove(payload.playerUuid());
-			server.execute(() -> {
-				for (ServerPlayer p : server.getPlayerList().getPlayers()) {
-					ServerPlayNetworking.send(p, payload);
-				}
-			});
-		});
-
-		// Tell a joining player about everyone already sitting, and forget players who leave.
-		ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> {
-			ServerPlayer joined = handler.player;
-			for (Map.Entry<UUID, Identifier> entry : SITTING.entrySet()) {
-				if (entry.getKey().equals(joined.getUUID())) continue;
-				ServerPlayNetworking.send(joined, new StartSitPayload(entry.getKey(), entry.getValue()));
+	private static void handleStartSit(StartSitPayload payload, IPayloadContext context) {
+		context.enqueueWork(() -> {
+			// Serverbound: context.player() is the sending ServerPlayer.
+			if (!(context.player() instanceof ServerPlayer)) {
+				return;
 			}
+			SITTING.put(payload.playerUuid(), payload.animId());
+			PacketDistributor.sendToAllPlayers(payload);
 		});
-		ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> SITTING.remove(handler.player.getUUID()));
+	}
+
+	private static void handleStopSit(StopSitPayload payload, IPayloadContext context) {
+		context.enqueueWork(() -> {
+			if (!(context.player() instanceof ServerPlayer)) {
+				return;
+			}
+			SITTING.remove(payload.playerUuid());
+			PacketDistributor.sendToAllPlayers(payload);
+		});
+	}
+
+	public static void onPlayerLoggedIn(PlayerEvent.PlayerLoggedInEvent event) {
+		if (!(event.getEntity() instanceof ServerPlayer joined)) {
+			return;
+		}
+		for (Map.Entry<UUID, Identifier> entry : SITTING.entrySet()) {
+			if (entry.getKey().equals(joined.getUUID())) {
+				continue;
+			}
+			PacketDistributor.sendToPlayer(joined, new StartSitPayload(entry.getKey(), entry.getValue()));
+		}
+	}
+
+	public static void onServerTick(ServerTickEvent.Post event) {
+		MinecraftServer server = event.getServer();
+		if (server == null || SITTING.isEmpty()) {
+			return;
+		}
+		var online = server.getPlayerList().getPlayers();
+		SITTING.keySet().removeIf(uuid -> online.stream().noneMatch(player -> player.getUUID().equals(uuid)));
 	}
 }

@@ -1,8 +1,6 @@
 package com.seatify.client;
 
 import com.mojang.blaze3d.platform.InputConstants;
-import com.mojang.brigadier.arguments.IntegerArgumentType;
-import com.mojang.brigadier.arguments.StringArgumentType;
 import com.seatify.Seatify;
 import com.seatify.SeatifyConfig;
 import com.zigythebird.playeranim.animation.PlayerAnimationController;
@@ -10,12 +8,6 @@ import com.zigythebird.playeranim.api.PlayerAnimationAccess;
 import com.zigythebird.playeranim.api.PlayerAnimationFactory;
 import com.zigythebird.playeranimcore.animation.layered.IAnimation;
 import com.zigythebird.playeranimcore.enums.PlayState;
-import net.fabricmc.api.ClientModInitializer;
-import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback;
-import net.fabricmc.fabric.api.client.command.v2.ClientCommands;
-import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
-import net.fabricmc.fabric.api.client.keymapping.v1.KeyMappingHelper;
-import net.fabricmc.fabric.api.event.player.UseBlockCallback;
 import net.minecraft.client.CameraType;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
@@ -48,11 +40,14 @@ import net.minecraft.world.level.block.state.properties.SlabType;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
+import net.neoforged.neoforge.client.event.ClientTickEvent;
+import net.neoforged.neoforge.client.event.RegisterKeyMappingsEvent;
+import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
 import org.lwjgl.glfw.GLFW;
 
 import java.util.Locale;
 
-public class SeatifyClient implements ClientModInitializer {
+public final class SeatifyClient {
 	/** PAL animation-layer id under which the sitting controller is registered on every player. */
 	public static final Identifier SIT_LAYER = Seatify.id("sit");
 	/** Datapack/user-extensible tag of blocks that act as chairs. */
@@ -61,9 +56,8 @@ public class SeatifyClient implements ClientModInitializer {
 	private static KeyMapping sitKey;
 	private static boolean isSitting = false;
 	private static CameraType previousPerspective = null;
-
-	private int animationState = 0;
-	private long lastActivityMs = System.currentTimeMillis();
+	private static int animationState = 0;
+	private static long lastActivityMs = System.currentTimeMillis();
 
 	// Animation sets (cycled through on repeated presses). All names live inside buttsit.json.
 	private static final Identifier[] GROUND = ids("kneesitting", "buttsit", "buttsit2", "kneeleaning");
@@ -77,8 +71,7 @@ public class SeatifyClient implements ClientModInitializer {
 	private static final Identifier[] CAMPFIRE = ids("campfiresit");
 	private static final Identifier[] FURNACE = ids("furnacesit");
 
-	private static final String[] POSE_NAMES =
-			{"ground", "chair", "fence", "bed", "sword", "axe", "shovel", "fishing", "campfire", "furnace"};
+	private SeatifyClient() {}
 
 	private static Identifier[] ids(String... names) {
 		Identifier[] out = new Identifier[names.length];
@@ -86,41 +79,30 @@ public class SeatifyClient implements ClientModInitializer {
 		return out;
 	}
 
-	@Override
-	public void onInitializeClient() {
+	public static void registerKeyMappings(RegisterKeyMappingsEvent event) {
 		KeyMapping.Category category = KeyMapping.Category.register(Seatify.id("sit"));
 		sitKey = new KeyMapping("key.seatify.sit", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_X, category);
-		KeyMappingHelper.registerKeyMapping(sitKey);
+		event.register(sitKey);
 
 		// Attach a sitting animation controller to every client player (local + remote).
 		PlayerAnimationFactory.ANIMATION_DATA_FACTORY.registerFactory(SIT_LAYER, 1000,
 				player -> new PlayerAnimationController(player,
 						(controller, state, animationSetter) -> PlayState.STOP));
-
-		SeatifyClientNetworking.registerClientReceivers();
-		UseBlockCallback.EVENT.register(this::onRightClickBlock);
-		ClientTickEvents.END_CLIENT_TICK.register(this::onClientTick);
-		ClientCommandRegistrationCallback.EVENT.register((dispatcher, access) ->
-				dispatcher.register(ClientCommands.literal("sit")
-						.executes(ctx -> {
-							commandContextSit();
-							return 1;
-						})
-						.then(ClientCommands.argument("pose", StringArgumentType.word())
-								.suggests((c, b) -> {
-									for (String p : POSE_NAMES) b.suggest(p);
-									return b.buildFuture();
-								})
-								.executes(ctx -> runPoseCommand(ctx.getSource(), StringArgumentType.getString(ctx, "pose"), 1))
-								.then(ClientCommands.argument("variant", IntegerArgumentType.integer(1))
-										.executes(ctx -> runPoseCommand(ctx.getSource(),
-												StringArgumentType.getString(ctx, "pose"),
-												IntegerArgumentType.getInteger(ctx, "variant")))))));
 	}
 
 	// Right-click an empty hand on a stair block to sit on it.
-	private InteractionResult onRightClickBlock(Player player, Level world, InteractionHand hand, BlockHitResult hit) {
-		if (!SeatifyConfig.getConfig().enableClickToSit) return InteractionResult.PASS;
+	public static void onRightClickBlock(PlayerInteractEvent.RightClickBlock event) {
+		if (!SeatifyConfig.getConfig().enableClickToSit) {
+			return;
+		}
+		InteractionResult result = onRightClickBlock(event.getEntity(), event.getLevel(), event.getHand(), event.getHitVec());
+		if (result != InteractionResult.PASS) {
+			event.setCancellationResult(result);
+			event.setCanceled(true);
+		}
+	}
+
+	private static InteractionResult onRightClickBlock(Player player, Level world, InteractionHand hand, BlockHitResult hit) {
 		if (!(player instanceof LocalPlayer local) || !world.isClientSide()) return InteractionResult.PASS;
 		if (!local.getMainHandItem().isEmpty()) return InteractionResult.PASS;
 		if (!canSit(local)) return InteractionResult.PASS;
@@ -154,13 +136,14 @@ public class SeatifyClient implements ClientModInitializer {
 
 		PlayerAnimationController controller = controllerFor(local);
 		if (controller != null) {
-			this.animationState = 0;
+			animationState = 0;
 			playAnimation(controller, local, STAIRS);
 		}
 		return InteractionResult.SUCCESS;
 	}
 
-	private void onClientTick(Minecraft client) {
+	public static void onClientTick(ClientTickEvent.Post event) {
+		Minecraft client = Minecraft.getInstance();
 		LocalPlayer player = client.player;
 		if (player == null || !client.isWindowActive()) {
 			SeatifyClientNetworking.reconcile(client);
@@ -171,17 +154,17 @@ public class SeatifyClient implements ClientModInitializer {
 		boolean moving = in.forward() || in.backward() || in.left() || in.right() || in.jump() || in.shift() || in.sprint();
 		if (moving) lastActivityMs = System.currentTimeMillis();
 
-		if (sitKey.consumeClick() && client.screen == null) {
+		if (sitKey != null && sitKey.consumeClick() && client.screen == null) {
 			PlayerAnimationController controller = controllerFor(player);
 			if (controller != null) {
-				handleSitPress(client, player, controller);
+				handleSitPress(player, controller);
 			}
 		}
 
 		// Moving cancels the sit (this is the only path that restores the camera).
 		if (isSitting && moving) {
 			standUp(controllerFor(player), player);
-			this.animationState = 0;
+			animationState = 0;
 		}
 
 		// Optional AFK auto-sit (off by default; was dead code in the original mod).
@@ -200,7 +183,7 @@ public class SeatifyClient implements ClientModInitializer {
 		SeatifyClientNetworking.reconcile(client);
 	}
 
-	private void handleSitPress(Minecraft client, LocalPlayer player, PlayerAnimationController controller) {
+	private static void handleSitPress(LocalPlayer player, PlayerAnimationController controller) {
 		if (!canSit(player)) return;
 		// Note: we do NOT stop the current animation here. triggerAnimation() replaces it in place,
 		// and calling stop would restore the camera mid-cycle (resetting a manual F5 change).
@@ -279,68 +262,18 @@ public class SeatifyClient implements ClientModInitializer {
 		playAnimation(controller, player, GROUND);
 	}
 
-	// ----- /sit command -----
-
-	private void commandContextSit() {
-		Minecraft client = Minecraft.getInstance();
-		LocalPlayer player = client.player;
-		if (player == null) return;
-		PlayerAnimationController controller = controllerFor(player);
-		if (controller != null) {
-			handleSitPress(client, player, controller);
-		}
-	}
-
-	private int runPoseCommand(net.fabricmc.fabric.api.client.command.v2.FabricClientCommandSource source, String pose, int variant) {
-		if (!commandSit(pose, variant)) {
-			source.sendFeedback(Component.literal(
-					"Seatify: unknown pose '" + pose + "'. Try one of: ground, chair, fence, bed, sword, axe, shovel, fishing, campfire, furnace"));
-		}
-		return 1;
-	}
-
-	/** @return false only if the pose name is unknown. */
-	private boolean commandSit(String pose, int variant) {
-		Identifier[] set = poseSet(pose);
-		if (set == null) return false;
-		Minecraft client = Minecraft.getInstance();
-		LocalPlayer player = client.player;
-		if (player == null || !canSit(player)) return true;
-		PlayerAnimationController controller = controllerFor(player);
-		if (controller == null) return true;
-		this.animationState = Math.floorMod(variant - 1, set.length);
-		playAnimation(controller, player, set);
-		return true;
-	}
-
-	private static Identifier[] poseSet(String name) {
-		return switch (name.toLowerCase(Locale.ROOT)) {
-			case "ground", "floor" -> GROUND;
-			case "chair", "stairs", "stair" -> STAIRS;
-			case "fence" -> FENCES;
-			case "bed", "lie", "liedown" -> BEDS;
-			case "sword" -> SWORD;
-			case "axe" -> AXE;
-			case "shovel" -> SHOVEL;
-			case "fishing", "rod" -> FISHING;
-			case "campfire", "fire" -> CAMPFIRE;
-			case "furnace" -> FURNACE;
-			default -> null;
-		};
-	}
-
 	// ----- animation plumbing -----
 
-	private void playAnimation(PlayerAnimationController controller, LocalPlayer player, Identifier[] animations) {
+	private static void playAnimation(PlayerAnimationController controller, LocalPlayer player, Identifier[] animations) {
 		if (controller == null || animations == null || animations.length == 0) return;
-		if (this.animationState < 0 || this.animationState >= animations.length) this.animationState = 0;
+		if (animationState < 0 || animationState >= animations.length) animationState = 0;
 
-		Identifier id = animations[this.animationState];
+		Identifier id = animations[animationState];
 		if (controller.triggerAnimation(id)) {
 			boolean wasSitting = isSitting;
 			isSitting = true;
 			SeatifyClientNetworking.sendStartSit(player.getUUID(), id);
-			this.animationState = (this.animationState + 1) % animations.length;
+			animationState = (animationState + 1) % animations.length;
 			lastActivityMs = System.currentTimeMillis();
 			// Only switch perspective on the initial sit, so a manual F5 while seated is preserved.
 			if (!wasSitting) {
@@ -349,7 +282,7 @@ public class SeatifyClient implements ClientModInitializer {
 		}
 	}
 
-	private void standUp(PlayerAnimationController controller, LocalPlayer player) {
+	private static void standUp(PlayerAnimationController controller, LocalPlayer player) {
 		if (!isSitting || controller == null) return;
 		controller.stop();
 		isSitting = false;
@@ -360,7 +293,7 @@ public class SeatifyClient implements ClientModInitializer {
 		}
 	}
 
-	private void setThirdPersonIfEnabled() {
+	private static void setThirdPersonIfEnabled() {
 		if (!SeatifyConfig.getConfig().enableThirdPersonOnSit) return;
 		Minecraft client = Minecraft.getInstance();
 		CameraType current = client.options.getCameraType();

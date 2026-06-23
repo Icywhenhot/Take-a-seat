@@ -5,12 +5,13 @@ import com.seatify.network.SeatifyNetworking.StopSitPayload;
 import com.zigythebird.playeranim.animation.PlayerAnimationController;
 import com.zigythebird.playeranim.api.PlayerAnimationAccess;
 import com.zigythebird.playeranimcore.animation.layered.IAnimation;
-import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
-import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.AbstractClientPlayer;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.player.Player;
+import net.neoforged.neoforge.client.network.ClientPacketDistributor;
+import net.neoforged.neoforge.client.network.event.RegisterClientPayloadHandlersEvent;
+import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 import java.util.Map;
 import java.util.UUID;
@@ -28,29 +29,38 @@ public final class SeatifyClientNetworking {
 
 	private static final Map<UUID, Identifier> REMOTE_SITS = new ConcurrentHashMap<>();
 
-	public static void registerClientReceivers() {
-		ClientPlayNetworking.registerGlobalReceiver(StartSitPayload.TYPE, (payload, context) ->
-				context.client().execute(() -> {
-					Player self = context.client().player;
-					if (self != null && self.getUUID().equals(payload.playerUuid())) return; // we animate ourselves
-					REMOTE_SITS.put(payload.playerUuid(), payload.animId());
-					PlayerAnimationController controller = controllerFor(context.client(), payload.playerUuid());
-					if (controller != null) controller.triggerAnimation(payload.animId());
-				}));
+	public static void registerClientReceivers(RegisterClientPayloadHandlersEvent event) {
+		event.register(StartSitPayload.TYPE, SeatifyClientNetworking::handleStartSit);
+		event.register(StopSitPayload.TYPE, SeatifyClientNetworking::handleStopSit);
+	}
 
-		ClientPlayNetworking.registerGlobalReceiver(StopSitPayload.TYPE, (payload, context) ->
-				context.client().execute(() -> {
-					REMOTE_SITS.remove(payload.playerUuid());
-					PlayerAnimationController controller = controllerFor(context.client(), payload.playerUuid());
-					if (controller != null) controller.stop();
-				}));
+	private static void handleStartSit(StartSitPayload payload, IPayloadContext context) {
+		context.enqueueWork(() -> {
+			Minecraft client = Minecraft.getInstance();
+			Player self = client.player;
+			if (self != null && self.getUUID().equals(payload.playerUuid())) return; // we animate ourselves
+			REMOTE_SITS.put(payload.playerUuid(), payload.animId());
+			PlayerAnimationController controller = controllerFor(client, payload.playerUuid());
+			if (controller != null) controller.triggerAnimation(payload.animId());
+		});
+	}
 
-		ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> REMOTE_SITS.clear());
+	private static void handleStopSit(StopSitPayload payload, IPayloadContext context) {
+		context.enqueueWork(() -> {
+			Minecraft client = Minecraft.getInstance();
+			REMOTE_SITS.remove(payload.playerUuid());
+			PlayerAnimationController controller = controllerFor(client, payload.playerUuid());
+			if (controller != null) controller.stop();
+		});
 	}
 
 	/** Re-apply sits to players whose entity has since loaded (e.g. you just joined). Cheap no-op when idle. */
 	public static void reconcile(Minecraft client) {
-		if (REMOTE_SITS.isEmpty() || client.level == null) return;
+		if (client.level == null) {
+			REMOTE_SITS.clear();
+			return;
+		}
+		if (REMOTE_SITS.isEmpty()) return;
 		for (Player p : client.level.players()) {
 			if (p == client.player) continue;
 			Identifier id = REMOTE_SITS.get(p.getUUID());
@@ -78,10 +88,10 @@ public final class SeatifyClientNetworking {
 	}
 
 	public static void sendStartSit(UUID uuid, Identifier anim) {
-		ClientPlayNetworking.send(new StartSitPayload(uuid, anim));
+		ClientPacketDistributor.sendToServer(new StartSitPayload(uuid, anim));
 	}
 
 	public static void sendStopSit(UUID uuid) {
-		ClientPlayNetworking.send(new StopSitPayload(uuid));
+		ClientPacketDistributor.sendToServer(new StopSitPayload(uuid));
 	}
 }

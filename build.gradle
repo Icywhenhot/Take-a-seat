@@ -1,79 +1,101 @@
 plugins {
-	id 'net.fabricmc.fabric-loom' version "${loom_version}"
+	id 'net.neoforged.moddev' version '2.0.141'
 	id 'maven-publish'
 }
 
 version = project.mod_version
-group = project.maven_group
+group = project.mod_group_id
 
 base {
-	archivesName = project.archives_base_name
+	archivesName = project.mod_id
 }
 
 repositories {
-	// Add repositories to retrieve artifacts from in here.
-	// You should only use this when depending on other mods because
-	// Loom adds the essential maven repositories to download Minecraft and libraries from automatically.
-	// See https://docs.gradle.org/current/userguide/declaring_repositories.html
-	// for more information about repositories.
-
-	// Player Animation Library (ZigyTheBird) maven
+	mavenCentral()
 	maven {
+		name = "NeoForged"
+		url = "https://maven.neoforged.net/releases/"
+	}
+	maven {
+		name = "Minecraft Libraries"
+		url = "https://libraries.minecraft.net/"
+	}
+	maven {
+		// Player Animation Library (com.zigythebird.playeranim)
 		name = "RedlanceMinecraft"
 		url = "https://repo.redlance.org/public"
 	}
-	// Mod Menu maven
-	maven {
-		name = "Terraformers"
-		url = "https://maven.terraformersmc.com/releases/"
-	}
-	// Cloth Config maven
-	maven {
-		name = "Shedaniel"
-		url = "https://maven.shedaniel.me/"
-	}
 }
 
-loom {
-	splitEnvironmentSourceSets()
+neoForge {
+	version = project.neo_version
 
-	mods {
-		"seatify" {
-			sourceSet sourceSets.main
-			sourceSet sourceSets.client
+	runs {
+		client {
+			client()
+			systemProperty "neoforge.enabledGameTestNamespaces", project.mod_id
+		}
+		server {
+			server()
+			systemProperty "neoforge.enabledGameTestNamespaces", project.mod_id
 		}
 	}
 
+	mods {
+		"${project.mod_id}" {
+			sourceSet sourceSets.main
+		}
+	}
 }
 
 dependencies {
-	// To change the versions see the gradle.properties file
-	minecraft "com.mojang:minecraft:${project.minecraft_version}"
-	
-	implementation "net.fabricmc:fabric-loader:${project.loader_version}"
+	implementation "net.neoforged:neoforge:${project.neo_version}"
 
-	// Fabric API. This is technically optional, but you probably want it anyway.
-	implementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
+	// Player Animation Library backend (NeoForge build for MC 26.1).
+	//
+	// On the compile/runtime classpath we only need the Neo artifact; it transitively pulls
+	// Core, services and mochafloats. We exclude the libraries Minecraft already ships (and pins
+	// via `strictly` version constraints) so they don't conflict at compile time.
+	implementation("com.zigythebird.playeranim:PlayerAnimationLibNeo:${project.pal_version}") {
+		exclude group: "com.google.code.gson"
+		exclude group: "org.slf4j"
+		exclude group: "it.unimi.dsi", module: "fastutil"
+		exclude group: "io.netty"
+		exclude group: "org.joml"
+		exclude group: "org.jetbrains", module: "annotations"
+	}
 
-	// Player Animation Library (ZigyTheBird) - the animation backend.
-	// 26.1 is unobfuscated, so mod deps use plain `implementation` (no remap step).
-	implementation "com.zigythebird.playeranim:PlayerAnimationLibFabric:${project.pal_version}"
-
-	// Mod Menu - OPTIONAL. Only used to expose the in-game config screen.
-	// Present at compile + dev runtime; not required for end users (entrypoint only loads if installed).
-	implementation "com.terraformersmc:modmenu:${project.modmenu_version}"
-
-	// Cloth Config - builds the config screen. Bundled (include) so users don't need a separate install.
-	implementation "me.shedaniel.cloth:cloth-config-fabric:${project.cloth_version}"
-	include "me.shedaniel.cloth:cloth-config-fabric:${project.cloth_version}"
+	// Bundle PAL and its (non-Minecraft) dependencies into our jar via Jar-in-Jar, so end users
+	// don't have to install Player Animation Library separately. jarJar is not transitive, so we
+	// list each embedded module explicitly. If the user *does* have PAL installed standalone,
+	// FML's version negotiation loads a single copy within the declared ranges.
+	jarJar("com.zigythebird.playeranim:PlayerAnimationLibNeo") {
+		version { strictly "[1.2.4+mc.26.1,2.0.0)"; prefer project.pal_version }
+	}
+	jarJar("com.zigythebird.playeranim:PlayerAnimationLibCore") {
+		version { strictly "[1.2.4+mc.26.1,2.0.0)"; prefer project.pal_version }
+	}
+	jarJar("org.redlance.common-utils:services") {
+		version { strictly "[1.2.8,2.0.0)"; prefer "1.2.8" }
+	}
+	jarJar("com.zigythebird:mochafloats") {
+		version { strictly "[5.0.0,6.0.0)"; prefer "5.0.0" }
+	}
 }
 
 processResources {
-	def version = project.version
-	inputs.property "version", version
+	inputs.property "version", project.version
 
-	filesMatching("fabric.mod.json") {
-		expand "version": version
+	filesMatching("META-INF/neoforge.mods.toml") {
+		expand(
+				minecraft_version: project.minecraft_version,
+				mod_group_id: project.mod_group_id,
+				mod_id: project.mod_id,
+				mod_license: project.mod_license,
+				mod_name: project.mod_name,
+				mod_version: project.mod_version,
+				neo_version: project.neo_version
+		)
 	}
 }
 
@@ -82,25 +104,20 @@ tasks.withType(JavaCompile).configureEach {
 }
 
 java {
-	// Loom will automatically attach sourcesJar to a RemapSourcesJar task and to the "build" task
-	// if it is present.
-	// If you remove this line, sources will not be generated.
 	withSourcesJar()
 
-	sourceCompatibility = JavaVersion.VERSION_25
-	targetCompatibility = JavaVersion.VERSION_25
+	// Mojang ships Java 25 to end users in 26.1.2, so mods must target Java 25.
+	toolchain.languageVersion = JavaLanguageVersion.of(25)
 }
 
 jar {
-	def projectName = project.name
-	inputs.property "projectName", projectName
+	inputs.property "projectName", project.mod_id
 
 	from("LICENSE") {
-		rename { "${it}_$projectName"}
+		rename { "${it}_${project.mod_id}" }
 	}
 }
 
-// configure the maven publication
 publishing {
 	publications {
 		create("mavenJava", MavenPublication) {
@@ -108,11 +125,6 @@ publishing {
 		}
 	}
 
-	// See https://docs.gradle.org/current/userguide/publishing_maven.html for information on how to set up publishing.
 	repositories {
-		// Add repositories to publish to here.
-		// Notice: This block does NOT have the same function as the block in the top level.
-		// The repositories here will be used for publishing your artifact, not for
-		// retrieving dependencies.
 	}
 }

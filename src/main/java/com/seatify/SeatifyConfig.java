@@ -2,7 +2,7 @@ package com.seatify;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
-import net.fabricmc.loader.api.FabricLoader;
+import net.neoforged.fml.loading.FMLPaths;
 
 import java.io.IOException;
 import java.io.Reader;
@@ -11,12 +11,13 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 
 /**
- * Simple JSON config, stored at {@code config/SeatifyConfig.json}.
+ * Simple JSON config, stored at {@code config/TakeASeatConfig.json}.
  * Mirrors the original mod's options.
  */
 public class SeatifyConfig {
 	private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
-	private static final Path CONFIG_PATH = FabricLoader.getInstance().getConfigDir().resolve("SeatifyConfig.json");
+	private static final Path CONFIG_PATH = FMLPaths.CONFIGDIR.get().resolve("TakeASeatConfig.json");
+	private static final Path LEGACY_CONFIG_PATH = FMLPaths.CONFIGDIR.get().resolve("SeatifyConfig.json");
 
 	/** Right-click an empty hand on stairs to sit down on them. */
 	public boolean enableClickToSit = true;
@@ -47,8 +48,9 @@ public class SeatifyConfig {
 	}
 
 	private void loadConfig() {
-		if (Files.exists(CONFIG_PATH)) {
-			try (Reader reader = Files.newBufferedReader(CONFIG_PATH)) {
+		Path loadPath = Files.exists(CONFIG_PATH) ? CONFIG_PATH : LEGACY_CONFIG_PATH;
+		if (Files.exists(loadPath)) {
+			try (Reader reader = Files.newBufferedReader(loadPath)) {
 				SeatifyConfig loaded = GSON.fromJson(reader, SeatifyConfig.class);
 				if (loaded != null) {
 					this.enableClickToSit = loaded.enableClickToSit;
@@ -60,7 +62,7 @@ public class SeatifyConfig {
 					this.afkSitDelaySeconds = loaded.afkSitDelaySeconds;
 				}
 			} catch (IOException e) {
-				Seatify.LOGGER.error("Failed to read SeatifyConfig.json", e);
+				Seatify.LOGGER.error("Failed to read TakeASeatConfig.json", e);
 			}
 		} else {
 			this.saveConfig();
@@ -73,8 +75,11 @@ public class SeatifyConfig {
 			try (Writer writer = Files.newBufferedWriter(CONFIG_PATH)) {
 				GSON.toJson(this, writer);
 			}
+			if (Files.exists(LEGACY_CONFIG_PATH) && !LEGACY_CONFIG_PATH.equals(CONFIG_PATH)) {
+				Files.deleteIfExists(LEGACY_CONFIG_PATH);
+			}
 		} catch (IOException e) {
-			Seatify.LOGGER.error("Failed to write SeatifyConfig.json", e);
+			Seatify.LOGGER.error("Failed to write TakeASeatConfig.json", e);
 		}
 	}
 }
