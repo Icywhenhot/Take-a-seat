@@ -9,7 +9,7 @@ import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.AbstractClientPlayer;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Player;
 
 import java.util.Map;
@@ -26,7 +26,7 @@ import java.util.concurrent.ConcurrentHashMap;
 public final class TakeASeatClientNetworking {
 	private TakeASeatClientNetworking() {}
 
-	private static final Map<UUID, Identifier> REMOTE_SITS = new ConcurrentHashMap<>();
+	private static final Map<UUID, ResourceLocation> REMOTE_SITS = new ConcurrentHashMap<>();
 
 	public static void registerClientReceivers() {
 		ClientPlayNetworking.registerGlobalReceiver(StartSitPayload.TYPE, (payload, context) ->
@@ -53,7 +53,7 @@ public final class TakeASeatClientNetworking {
 		if (REMOTE_SITS.isEmpty() || client.level == null) return;
 		for (Player p : client.level.players()) {
 			if (p == client.player) continue;
-			Identifier id = REMOTE_SITS.get(p.getUUID());
+			ResourceLocation id = REMOTE_SITS.get(p.getUUID());
 			if (id == null || !(p instanceof AbstractClientPlayer)) continue;
 			PlayerAnimationController controller = controllerFor(p);
 			if (controller != null && !controller.isActive()) {
@@ -77,7 +77,7 @@ public final class TakeASeatClientNetworking {
 		return layer instanceof PlayerAnimationController controller ? controller : null;
 	}
 
-	public static void sendStartSit(UUID uuid, Identifier anim) {
+	public static void sendStartSit(UUID uuid, ResourceLocation anim) {
 		ClientPlayNetworking.send(new StartSitPayload(uuid, anim));
 	}
 

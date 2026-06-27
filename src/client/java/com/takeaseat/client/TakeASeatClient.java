@@ -24,7 +24,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.tags.ItemTags;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.InteractionHand;
@@ -54,7 +54,7 @@ import java.util.Locale;
 
 public class TakeASeatClient implements ClientModInitializer {
 	/** PAL animation-layer id under which the sitting controller is registered on every player. */
-	public static final Identifier SIT_LAYER = TakeASeat.id("sit");
+	public static final ResourceLocation SIT_LAYER = TakeASeat.id("sit");
 	/** Datapack/user-extensible tag of blocks that act as chairs. */
 	public static final TagKey<Block> SITTABLE = TagKey.create(Registries.BLOCK, TakeASeat.id("sittable"));
 
@@ -66,22 +66,22 @@ public class TakeASeatClient implements ClientModInitializer {
 	private long lastActivityMs = System.currentTimeMillis();
 
 	// Animation sets (cycled through on repeated presses). All names live inside buttsit.json.
-	private static final Identifier[] GROUND = ids("kneesitting", "buttsit", "buttsit2", "kneeleaning");
-	private static final Identifier[] STAIRS = ids("chairsitting", "chairsitting2", "chairsitting3", "chairsitting4");
-	private static final Identifier[] FENCES = ids("fencesitting", "fencesitting2");
-	private static final Identifier[] BEDS = ids("bedlyingdown", "bedlyingdown2", "bedlyingdown3");
-	private static final Identifier[] SWORD = ids("swordsit", "swordsit2");
-	private static final Identifier[] AXE = ids("sittingaxe");
-	private static final Identifier[] SHOVEL = ids("sittingshovel");
-	private static final Identifier[] FISHING = ids("fishing");
-	private static final Identifier[] CAMPFIRE = ids("campfiresit");
-	private static final Identifier[] FURNACE = ids("furnacesit");
+	private static final ResourceLocation[] GROUND = ids("kneesitting", "buttsit", "buttsit2", "kneeleaning");
+	private static final ResourceLocation[] STAIRS = ids("chairsitting", "chairsitting2", "chairsitting3", "chairsitting4");
+	private static final ResourceLocation[] FENCES = ids("fencesitting", "fencesitting2");
+	private static final ResourceLocation[] BEDS = ids("bedlyingdown", "bedlyingdown2", "bedlyingdown3");
+	private static final ResourceLocation[] SWORD = ids("swordsit", "swordsit2");
+	private static final ResourceLocation[] AXE = ids("sittingaxe");
+	private static final ResourceLocation[] SHOVEL = ids("sittingshovel");
+	private static final ResourceLocation[] FISHING = ids("fishing");
+	private static final ResourceLocation[] CAMPFIRE = ids("campfiresit");
+	private static final ResourceLocation[] FURNACE = ids("furnacesit");
 
 	private static final String[] POSE_NAMES =
 			{"ground", "chair", "fence", "bed", "sword", "axe", "shovel", "fishing", "campfire", "furnace"};
 
-	private static Identifier[] ids(String... names) {
-		Identifier[] out = new Identifier[names.length];
+	private static ResourceLocation[] ids(String... names) {
+		ResourceLocation[] out = new ResourceLocation[names.length];
 		for (int i = 0; i < names.length; i++) out[i] = TakeASeat.id(names[i]);
 		return out;
 	}
@@ -301,7 +301,7 @@ public class TakeASeatClient implements ClientModInitializer {
 
 	/** @return false only if the pose name is unknown. */
 	private boolean commandSit(String pose, int variant) {
-		Identifier[] set = poseSet(pose);
+		ResourceLocation[] set = poseSet(pose);
 		if (set == null) return false;
 		Minecraft client = Minecraft.getInstance();
 		LocalPlayer player = client.player;
@@ -313,7 +313,7 @@ public class TakeASeatClient implements ClientModInitializer {
 		return true;
 	}
 
-	private static Identifier[] poseSet(String name) {
+	private static ResourceLocation[] poseSet(String name) {
 		return switch (name.toLowerCase(Locale.ROOT)) {
 			case "ground", "floor" -> GROUND;
 			case "chair", "stairs", "stair" -> STAIRS;
@@ -331,11 +331,11 @@ public class TakeASeatClient implements ClientModInitializer {
 
 	// ----- animation plumbing -----
 
-	private void playAnimation(PlayerAnimationController controller, LocalPlayer player, Identifier[] animations) {
+	private void playAnimation(PlayerAnimationController controller, LocalPlayer player, ResourceLocation[] animations) {
 		if (controller == null || animations == null || animations.length == 0) return;
 		if (this.animationState < 0 || this.animationState >= animations.length) this.animationState = 0;
 
-		Identifier id = animations[this.animationState];
+		ResourceLocation id = animations[this.animationState];
 		if (controller.triggerAnimation(id)) {
 			boolean wasSitting = isSitting;
 			isSitting = true;

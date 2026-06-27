@@ -3,7 +3,7 @@
 	"id": "takeaseat",
 	"version": "${version}",
 	"name": "Take a Seat",
-	"description": "Press a key to sit, lounge, and relax — context-aware poses for the ground, stairs, fences, beds, campfires, furnaces, and while holding tools or a fishing rod. A spiritual successor to Sitting Plus, rebuilt for 1.21.11.",
+	"description": "Press a key to sit, lounge, and relax — context-aware poses for the ground, stairs, fences, beds, campfires, furnaces, and while holding tools or a fishing rod. A spiritual successor to Sitting Plus, rebuilt for 1.21.10.",
 	"authors": [
 		"Take a Seat"
 	],
@@ -30,7 +30,7 @@
 	],
 	"depends": {
 		"fabricloader": ">=0.16.6",
-		"minecraft": "~1.21.11",
+		"minecraft": "~1.21.10",
 		"java": ">=21",
 		"fabric-api": "*",
 		"player_animation_library": "*"

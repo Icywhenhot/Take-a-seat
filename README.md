@@ -4,7 +4,7 @@ Sit, lounge, and relax. Press a key and Take a Seat plays a **context-aware sitt
 player — it figures out *what* you're near or holding and picks a fitting pose, then keeps your model
 in frame with a smooth camera. Other players see you sitting too (when they also have the mod).
 
-Take a Seat is a from-scratch rebuild of the discontinued **Sitting Plus** for Minecraft **1.21.11**, running
+Take a Seat is a from-scratch rebuild of the discontinued **Sitting Plus** for Minecraft **1.21.10**, running
 on the [Player Animation Library](https://modrinth.com/mod/player-animation-library) backend.
 
 > These are *cosmetic* animations. You don't actually mount the block — your model poses in place, and
@@ -16,10 +16,10 @@ on the [Player Animation Library](https://modrinth.com/mod/player-animation-libr
 
 | Mod | Version |
 |---|---|
-| Minecraft | 1.21.11 (Fabric) |
+| Minecraft | 1.21.10 (Fabric) |
 | Fabric Loader | 0.16.6+ |
-| Fabric API | latest for 1.21.11 |
-| Player Animation Library | 1.1.7+mc.1.21.11 (Fabric) |
+| Fabric API | latest for 1.21.10 |
+| Player Animation Library | 1.1.3+mc.1.21.9 (Fabric) |
 
 ---
 
@@ -113,7 +113,7 @@ Bottom slabs and carpets are recognized automatically, so you only need the tag 
 ./gradlew build
 ```
 
-Requires a JDK that can target Java 21 (Minecraft 1.21.11 runs on Java 21). The output jar lands in
+Requires a JDK that can target Java 21 (Minecraft 1.21.10 runs on Java 21). The output jar lands in
 `build/libs/`. To test in-game: `./gradlew runClient` (Player Animation Library is pulled in automatically
 for the dev run).
 

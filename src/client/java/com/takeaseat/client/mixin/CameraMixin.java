@@ -3,8 +3,6 @@ package com.takeaseat.client.mixin;
 import com.takeaseat.TakeASeatConfig;
 import com.takeaseat.client.TakeASeatClient;
 import net.minecraft.client.Camera;
-import net.minecraft.world.entity.Entity;
-import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -28,8 +26,10 @@ public abstract class CameraMixin {
 
 	@Unique private double takeaseat$smoothOffset = 0.0;
 
+	// Only CallbackInfo is declared (target args are dropped) so this stays correct across versions
+	// where Camera.setup's first parameter differs (BlockGetter in 1.21.10, Level in 1.21.11).
 	@Inject(method = "setup", at = @At("TAIL"))
-	private void takeaseat$focusOnSittingPlayer(Level level, Entity entity, boolean detached, boolean thirdPerson, float partialTick, CallbackInfo ci) {
+	private void takeaseat$focusOnSittingPlayer(CallbackInfo ci) {
 		TakeASeatConfig cfg = TakeASeatConfig.getConfig();
 		boolean sitting = cfg.enableSitCameraFocus && TakeASeatClient.isSitting();
 		// If configured, only apply the lower in first person (isDetached() == third person).
