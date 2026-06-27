@@ -1,7 +1,22 @@
+// NOTE: Loom is applied via the legacy buildscript classpath (not the plugins {} DSL) so we can pin an
+// exact 1.13.x release. Loom 1.14.x mis-detects the last obfuscated release (1.21.11) as "unobfuscated"
+// because it uses a release-time-only cutoff; 1.13.x predates that and builds obfuscated 1.21.11 correctly.
+buildscript {
+	repositories {
+		maven { url = "https://maven.fabricmc.net/" }
+		mavenCentral()
+		gradlePluginPortal()
+	}
+	dependencies {
+		classpath "net.fabricmc:fabric-loom:${loom_version}"
+	}
+}
+
 plugins {
-	id 'net.fabricmc.fabric-loom' version "${loom_version}"
 	id 'maven-publish'
 }
+
+apply plugin: 'fabric-loom'
 
 version = project.mod_version
 group = project.maven_group
@@ -38,7 +53,7 @@ loom {
 	splitEnvironmentSourceSets()
 
 	mods {
-		"seatify" {
+		"takeaseat" {
 			sourceSet sourceSets.main
 			sourceSet sourceSets.client
 		}
@@ -49,22 +64,24 @@ loom {
 dependencies {
 	// To change the versions see the gradle.properties file
 	minecraft "com.mojang:minecraft:${project.minecraft_version}"
-	
-	implementation "net.fabricmc:fabric-loader:${project.loader_version}"
+	// Official Mojang mappings (the source is written against Mojang names).
+	mappings loom.officialMojangMappings()
+
+	modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
 
 	// Fabric API. This is technically optional, but you probably want it anyway.
-	implementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
+	modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
 
 	// Player Animation Library (ZigyTheBird) - the animation backend.
-	// 26.1 is unobfuscated, so mod deps use plain `implementation` (no remap step).
-	implementation "com.zigythebird.playeranim:PlayerAnimationLibFabric:${project.pal_version}"
+	// 1.21.11 is obfuscated, so mod deps use `modImplementation` (Loom remaps them).
+	modImplementation "com.zigythebird.playeranim:PlayerAnimationLibFabric:${project.pal_version}"
 
 	// Mod Menu - OPTIONAL. Only used to expose the in-game config screen.
 	// Present at compile + dev runtime; not required for end users (entrypoint only loads if installed).
-	implementation "com.terraformersmc:modmenu:${project.modmenu_version}"
+	modImplementation "com.terraformersmc:modmenu:${project.modmenu_version}"
 
 	// Cloth Config - builds the config screen. Bundled (include) so users don't need a separate install.
-	implementation "me.shedaniel.cloth:cloth-config-fabric:${project.cloth_version}"
+	modImplementation "me.shedaniel.cloth:cloth-config-fabric:${project.cloth_version}"
 	include "me.shedaniel.cloth:cloth-config-fabric:${project.cloth_version}"
 }
 
@@ -78,7 +95,7 @@ processResources {
 }
 
 tasks.withType(JavaCompile).configureEach {
-	it.options.release = 25
+	it.options.release = 21
 }
 
 java {
@@ -87,8 +104,8 @@ java {
 	// If you remove this line, sources will not be generated.
 	withSourcesJar()
 
-	sourceCompatibility = JavaVersion.VERSION_25
-	targetCompatibility = JavaVersion.VERSION_25
+	sourceCompatibility = JavaVersion.VERSION_21
+	targetCompatibility = JavaVersion.VERSION_21
 }
 
 jar {

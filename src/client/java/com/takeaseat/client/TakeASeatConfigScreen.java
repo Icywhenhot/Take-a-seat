@@ -1,6 +1,6 @@
-package com.seatify.client;
+package com.takeaseat.client;
 
-import com.seatify.SeatifyConfig;
+import com.takeaseat.TakeASeatConfig;
 import me.shedaniel.clothconfig2.api.ConfigBuilder;
 import me.shedaniel.clothconfig2.api.ConfigCategory;
 import me.shedaniel.clothconfig2.api.ConfigEntryBuilder;
@@ -8,18 +8,18 @@ import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 
 /**
- * Builds the Seatify settings screen with Cloth Config. Values are written straight back into
- * {@link SeatifyConfig} and persisted via {@code saveConfig()} when the screen's Save is pressed.
+ * Builds the TakeASeat settings screen with Cloth Config. Values are written straight back into
+ * {@link TakeASeatConfig} and persisted via {@code saveConfig()} when the screen's Save is pressed.
  */
-public final class SeatifyConfigScreen {
-	private SeatifyConfigScreen() {}
+public final class TakeASeatConfigScreen {
+	private TakeASeatConfigScreen() {}
 
 	public static Screen create(Screen parent) {
-		SeatifyConfig cfg = SeatifyConfig.getConfig();
+		TakeASeatConfig cfg = TakeASeatConfig.getConfig();
 
 		ConfigBuilder builder = ConfigBuilder.create()
 				.setParentScreen(parent)
-				.setTitle(Component.literal("Seatify"));
+				.setTitle(Component.literal("Take a Seat"));
 		builder.setSavingRunnable(cfg::saveConfig);
 
 		ConfigEntryBuilder eb = builder.entryBuilder();
