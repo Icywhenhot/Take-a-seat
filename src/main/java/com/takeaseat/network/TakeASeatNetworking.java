@@ -5,7 +5,7 @@ import net.minecraft.core.UUIDUtil;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
@@ -24,20 +24,20 @@ import java.util.concurrent.ConcurrentHashMap;
  * the server simply re-broadcasts that to every connected client so everyone mirrors the pose.
  */
 public final class TakeASeatNetworking {
-	public static final Identifier START_SIT_ID = TakeASeat.id("start_sit");
-	public static final Identifier STOP_SIT_ID = TakeASeat.id("stop_sit");
+	public static final ResourceLocation START_SIT_ID = TakeASeat.id("start_sit");
+	public static final ResourceLocation STOP_SIT_ID = TakeASeat.id("stop_sit");
 
 	/** Server-side record of who is currently sitting (and with which animation), for resyncing late joiners. */
-	private static final Map<UUID, Identifier> SITTING = new ConcurrentHashMap<>();
+	private static final Map<UUID, ResourceLocation> SITTING = new ConcurrentHashMap<>();
 
 	private TakeASeatNetworking() {}
 
 	/** Sent when a player begins a sitting animation. Carries who, and which animation. */
-	public record StartSitPayload(UUID playerUuid, Identifier animId) implements CustomPacketPayload {
+	public record StartSitPayload(UUID playerUuid, ResourceLocation animId) implements CustomPacketPayload {
 		public static final Type<StartSitPayload> TYPE = new Type<>(START_SIT_ID);
 		public static final StreamCodec<RegistryFriendlyByteBuf, StartSitPayload> CODEC = StreamCodec.composite(
 				UUIDUtil.STREAM_CODEC, StartSitPayload::playerUuid,
-				Identifier.STREAM_CODEC, StartSitPayload::animId,
+				ResourceLocation.STREAM_CODEC, StartSitPayload::animId,
 				StartSitPayload::new
 		);
 
@@ -92,7 +92,7 @@ public final class TakeASeatNetworking {
 		if (!(event.getEntity() instanceof ServerPlayer joined)) {
 			return;
 		}
-		for (Map.Entry<UUID, Identifier> entry : SITTING.entrySet()) {
+		for (Map.Entry<UUID, ResourceLocation> entry : SITTING.entrySet()) {
 			if (entry.getKey().equals(joined.getUUID())) {
 				continue;
 			}

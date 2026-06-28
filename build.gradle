@@ -51,7 +51,7 @@ neoForge {
 dependencies {
 	implementation "net.neoforged:neoforge:${project.neo_version}"
 
-	// Player Animation Library backend (NeoForge build for MC 1.21.11).
+	// Player Animation Library backend (NeoForge build for MC 1.21.9, compatible with 1.21.10).
 	//
 	// On the compile/runtime classpath we only need the Neo artifact; it transitively pulls
 	// Core, mochafloats and javassist. We exclude the libraries Minecraft already ships (and pins
@@ -70,13 +70,13 @@ dependencies {
 	// list each embedded module explicitly. If the user *does* have PAL installed standalone,
 	// FML's version negotiation loads a single copy within the declared ranges.
 	jarJar("com.zigythebird.playeranim:PlayerAnimationLibNeo") {
-		version { strictly "[1.1.7+mc.1.21.11,2.0.0)"; prefer project.pal_version }
+		version { strictly "[1.1.3+mc.1.21.9,2.0.0)"; prefer project.pal_version }
 	}
 	jarJar("com.zigythebird.playeranim:PlayerAnimationLibCore") {
-		version { strictly "[1.1.7+mc.1.21.11,2.0.0)"; prefer project.pal_version }
+		version { strictly "[1.1.3+mc.1.21.9,2.0.0)"; prefer project.pal_version }
 	}
 	jarJar("com.zigythebird:mochafloats") {
-		version { strictly "[4.1.5,5.0.0)"; prefer "4.1.5" }
+		version { strictly "[4.1.0,5.0.0)"; prefer "4.1.0" }
 	}
 	jarJar("org.javassist:javassist") {
 		version { strictly "[3.30.2-GA,4.0.0)"; prefer "3.30.2-GA" }

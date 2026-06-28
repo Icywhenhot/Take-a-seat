@@ -15,7 +15,7 @@ logoFile="assets/takeaseat/icon.png"
 [[dependencies.${mod_id}]]
 modId="neoforge"
 type="required"
-versionRange="[21.11.42,)"
+versionRange="[21.10.64,)"
 ordering="NONE"
 side="BOTH"
 

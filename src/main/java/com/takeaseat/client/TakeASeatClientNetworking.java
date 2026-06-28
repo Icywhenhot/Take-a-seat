@@ -7,7 +7,7 @@ import com.zigythebird.playeranim.api.PlayerAnimationAccess;
 import com.zigythebird.playeranimcore.animation.layered.IAnimation;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.AbstractClientPlayer;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Player;
 import net.neoforged.neoforge.client.network.ClientPacketDistributor;
 import net.neoforged.neoforge.client.network.event.RegisterClientPayloadHandlersEvent;
@@ -27,7 +27,7 @@ import java.util.concurrent.ConcurrentHashMap;
 public final class TakeASeatClientNetworking {
 	private TakeASeatClientNetworking() {}
 
-	private static final Map<UUID, Identifier> REMOTE_SITS = new ConcurrentHashMap<>();
+	private static final Map<UUID, ResourceLocation> REMOTE_SITS = new ConcurrentHashMap<>();
 
 	public static void registerClientReceivers(RegisterClientPayloadHandlersEvent event) {
 		event.register(StartSitPayload.TYPE, TakeASeatClientNetworking::handleStartSit);
@@ -63,7 +63,7 @@ public final class TakeASeatClientNetworking {
 		if (REMOTE_SITS.isEmpty()) return;
 		for (Player p : client.level.players()) {
 			if (p == client.player) continue;
-			Identifier id = REMOTE_SITS.get(p.getUUID());
+			ResourceLocation id = REMOTE_SITS.get(p.getUUID());
 			if (id == null || !(p instanceof AbstractClientPlayer)) continue;
 			PlayerAnimationController controller = controllerFor(p);
 			if (controller != null && !controller.isActive()) {
@@ -87,7 +87,7 @@ public final class TakeASeatClientNetworking {
 		return layer instanceof PlayerAnimationController controller ? controller : null;
 	}
 
-	public static void sendStartSit(UUID uuid, Identifier anim) {
+	public static void sendStartSit(UUID uuid, ResourceLocation anim) {
 		ClientPacketDistributor.sendToServer(new StartSitPayload(uuid, anim));
 	}
 

@@ -4,7 +4,7 @@ import com.takeaseat.network.TakeASeatNetworking;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.neoforge.common.NeoForge;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -12,7 +12,7 @@ import org.slf4j.LoggerFactory;
  * Take a Seat – common (both-sides) entrypoint.
  *
  * <p>Spiritual successor to the "Sitting Plus" mod. Same behaviour, new identity,
- * rebuilt for Minecraft 1.21.11 on the {@code com.zigythebird.playeranim}
+ * rebuilt for Minecraft 1.21.10 on the {@code com.zigythebird.playeranim}
  * (Player Animation Library) backend instead of the discontinued kosmx player-animator.
  */
 @Mod(TakeASeat.MOD_ID)
@@ -30,7 +30,7 @@ public class TakeASeat {
 	}
 
 	/** Helper for building {@code takeaseat:<path>} identifiers. */
-	public static Identifier id(String path) {
-		return Identifier.fromNamespaceAndPath(MOD_ID, path);
+	public static ResourceLocation id(String path) {
+		return ResourceLocation.fromNamespaceAndPath(MOD_ID, path);
 	}
 }
