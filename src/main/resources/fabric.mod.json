@@ -3,7 +3,7 @@
 	"id": "seatify",
 	"version": "${version}",
 	"name": "Seatify",
-	"description": "Press a key to sit, lounge, and relax — context-aware poses for the ground, stairs, fences, beds, campfires, furnaces, and while holding tools or a fishing rod. A spiritual successor to Sitting Plus, rebuilt for 26.1.",
+	"description": "Press a key to sit, lounge, and relax — context-aware poses for the ground, stairs, fences, beds, campfires, furnaces, and while holding tools or a fishing rod. A spiritual successor to Sitting Plus, rebuilt for 26.2.",
 	"authors": [
 		"Seatify"
 	],
@@ -30,7 +30,7 @@
 	],
 	"depends": {
 		"fabricloader": ">=0.16.6",
-		"minecraft": "~26.1.2",
+		"minecraft": "~26.2",
 		"java": ">=25",
 		"fabric-api": "*",
 		"player_animation_library": "*"

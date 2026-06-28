@@ -171,7 +171,7 @@ public class SeatifyClient implements ClientModInitializer {
 		boolean moving = in.forward() || in.backward() || in.left() || in.right() || in.jump() || in.shift() || in.sprint();
 		if (moving) lastActivityMs = System.currentTimeMillis();
 
-		if (sitKey.consumeClick() && client.screen == null) {
+		if (sitKey.consumeClick() && client.gui.screen() == null) {
 			PlayerAnimationController controller = controllerFor(player);
 			if (controller != null) {
 				handleSitPress(client, player, controller);
@@ -186,7 +186,7 @@ public class SeatifyClient implements ClientModInitializer {
 
 		// Optional AFK auto-sit (off by default; was dead code in the original mod).
 		SeatifyConfig cfg = SeatifyConfig.getConfig();
-		if (cfg.enableAfkSit && !isSitting && client.screen == null && canSit(player)) {
+		if (cfg.enableAfkSit && !isSitting && client.gui.screen() == null && canSit(player)) {
 			long delayMs = cfg.afkSitDelaySeconds * 1000L;
 			if (System.currentTimeMillis() - lastActivityMs >= delayMs) {
 				PlayerAnimationController controller = controllerFor(player);
