@@ -1,7 +1,7 @@
 {
 	"required": true,
-	"package": "com.seatify.client.mixin",
-	"compatibilityLevel": "JAVA_25",
+	"package": "com.takeaseat.client.mixin",
+	"compatibilityLevel": "JAVA_21",
 	"client": [
 		"CameraMixin"
 	],

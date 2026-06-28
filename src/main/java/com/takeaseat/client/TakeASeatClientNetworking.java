@@ -1,7 +1,7 @@
-package com.seatify.client;
+package com.takeaseat.client;
 
-import com.seatify.network.SeatifyNetworking.StartSitPayload;
-import com.seatify.network.SeatifyNetworking.StopSitPayload;
+import com.takeaseat.network.TakeASeatNetworking.StartSitPayload;
+import com.takeaseat.network.TakeASeatNetworking.StopSitPayload;
 import com.zigythebird.playeranim.animation.PlayerAnimationController;
 import com.zigythebird.playeranim.api.PlayerAnimationAccess;
 import com.zigythebird.playeranimcore.animation.layered.IAnimation;
@@ -19,19 +19,19 @@ import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Client-side networking: applies the sit/stand animations broadcast by the server onto <em>other</em>
- * players' avatars. The local player is animated directly (see {@link SeatifyClient}), so we skip ourselves.
+ * players' avatars. The local player is animated directly (see {@link TakeASeatClient}), so we skip ourselves.
  *
  * <p>{@link #REMOTE_SITS} remembers who is currently sitting so that a player whose entity loads in late
  * (e.g. you just joined and they were already seated) still gets their pose applied — see {@link #reconcile}.
  */
-public final class SeatifyClientNetworking {
-	private SeatifyClientNetworking() {}
+public final class TakeASeatClientNetworking {
+	private TakeASeatClientNetworking() {}
 
 	private static final Map<UUID, Identifier> REMOTE_SITS = new ConcurrentHashMap<>();
 
 	public static void registerClientReceivers(RegisterClientPayloadHandlersEvent event) {
-		event.register(StartSitPayload.TYPE, SeatifyClientNetworking::handleStartSit);
-		event.register(StopSitPayload.TYPE, SeatifyClientNetworking::handleStopSit);
+		event.register(StartSitPayload.TYPE, TakeASeatClientNetworking::handleStartSit);
+		event.register(StopSitPayload.TYPE, TakeASeatClientNetworking::handleStopSit);
 	}
 
 	private static void handleStartSit(StartSitPayload payload, IPayloadContext context) {
@@ -83,7 +83,7 @@ public final class SeatifyClientNetworking {
 	}
 
 	private static PlayerAnimationController controllerFor(Player player) {
-		IAnimation layer = PlayerAnimationAccess.getPlayerAnimationLayer(player, SeatifyClient.SIT_LAYER);
+		IAnimation layer = PlayerAnimationAccess.getPlayerAnimationLayer(player, TakeASeatClient.SIT_LAYER);
 		return layer instanceof PlayerAnimationController controller ? controller : null;
 	}
 

@@ -1,7 +1,7 @@
 {
   "spec": 6,
-  "version": "26.1.2",
-  "java_target": 25,
+  "version": "1.21.11",
+  "java_target": 21,
   "encoding": "UTF-8",
   "data": {
     "patches": "patches/"
@@ -60,7 +60,7 @@
         "--no-mod-manifest"
       ],
       "jvmargs": [],
-      "java_version": 25
+      "java_version": 21
     },
     "decompile": {
       "classpath": [
@@ -87,7 +87,7 @@
       "jvmargs": [
         "-Xmx4g"
       ],
-      "java_version": 25
+      "java_version": 21
     }
   },
   "libraries": {

@@ -51,10 +51,10 @@ neoForge {
 dependencies {
 	implementation "net.neoforged:neoforge:${project.neo_version}"
 
-	// Player Animation Library backend (NeoForge build for MC 26.1).
+	// Player Animation Library backend (NeoForge build for MC 1.21.11).
 	//
 	// On the compile/runtime classpath we only need the Neo artifact; it transitively pulls
-	// Core, services and mochafloats. We exclude the libraries Minecraft already ships (and pins
+	// Core, mochafloats and javassist. We exclude the libraries Minecraft already ships (and pins
 	// via `strictly` version constraints) so they don't conflict at compile time.
 	implementation("com.zigythebird.playeranim:PlayerAnimationLibNeo:${project.pal_version}") {
 		exclude group: "com.google.code.gson"
@@ -70,16 +70,16 @@ dependencies {
 	// list each embedded module explicitly. If the user *does* have PAL installed standalone,
 	// FML's version negotiation loads a single copy within the declared ranges.
 	jarJar("com.zigythebird.playeranim:PlayerAnimationLibNeo") {
-		version { strictly "[1.2.4+mc.26.1,2.0.0)"; prefer project.pal_version }
+		version { strictly "[1.1.7+mc.1.21.11,2.0.0)"; prefer project.pal_version }
 	}
 	jarJar("com.zigythebird.playeranim:PlayerAnimationLibCore") {
-		version { strictly "[1.2.4+mc.26.1,2.0.0)"; prefer project.pal_version }
-	}
-	jarJar("org.redlance.common-utils:services") {
-		version { strictly "[1.2.8,2.0.0)"; prefer "1.2.8" }
+		version { strictly "[1.1.7+mc.1.21.11,2.0.0)"; prefer project.pal_version }
 	}
 	jarJar("com.zigythebird:mochafloats") {
-		version { strictly "[5.0.0,6.0.0)"; prefer "5.0.0" }
+		version { strictly "[4.1.5,5.0.0)"; prefer "4.1.5" }
+	}
+	jarJar("org.javassist:javassist") {
+		version { strictly "[3.30.2-GA,4.0.0)"; prefer "3.30.2-GA" }
 	}
 }
 
@@ -100,14 +100,14 @@ processResources {
 }
 
 tasks.withType(JavaCompile).configureEach {
-	it.options.release = 25
+	it.options.release = 21
 }
 
 java {
 	withSourcesJar()
 
-	// Mojang ships Java 25 to end users in 26.1.2, so mods must target Java 25.
-	toolchain.languageVersion = JavaLanguageVersion.of(25)
+	// Minecraft 1.21.11 runs on Java 21.
+	toolchain.languageVersion = JavaLanguageVersion.of(21)
 }
 
 jar {
