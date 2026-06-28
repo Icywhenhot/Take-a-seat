@@ -38,7 +38,7 @@ loom {
 	splitEnvironmentSourceSets()
 
 	mods {
-		"seatify" {
+		"takeaseat" {
 			sourceSet sourceSets.main
 			sourceSet sourceSets.client
 		}

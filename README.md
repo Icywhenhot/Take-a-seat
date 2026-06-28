@@ -1,10 +1,10 @@
-# Seatify
+# Take a Seat
 
-Sit, lounge, and relax. Press a key and Seatify plays a **context-aware sitting animation** on your
+Sit, lounge, and relax. Press a key and Take a Seat plays a **context-aware sitting animation** on your
 player — it figures out *what* you're near or holding and picks a fitting pose, then keeps your model
 in frame with a smooth camera. Other players see you sitting too (when they also have the mod).
 
-Seatify is a from-scratch rebuild of the discontinued **Sitting Plus** for Minecraft **26.1.2**, running
+Take a Seat is a from-scratch rebuild of the discontinued **Sitting Plus** for Minecraft **26.2**, running
 on the [Player Animation Library](https://modrinth.com/mod/player-animation-library) backend.
 
 > These are *cosmetic* animations. You don't actually mount the block — your model poses in place, and
@@ -16,16 +16,16 @@ on the [Player Animation Library](https://modrinth.com/mod/player-animation-libr
 
 | Mod | Version |
 |---|---|
-| Minecraft | 26.1.2 (Fabric) |
+| Minecraft | 26.2 (Fabric) |
 | Fabric Loader | 0.19.3+ |
-| Fabric API | latest for 26.1.2 |
-| Player Animation Library | 1.2.3+mc.26.1 (Fabric) |
+| Fabric API | latest for 26.2 |
+| Player Animation Library | 1.2.4+mc.26.2 (Fabric) |
 
 ---
 
 ## How to use
 
-- Press **`X`** (rebindable in *Options → Controls → Seatify*) to sit.
+- Press **`X`** (rebindable in *Options → Controls → Take a Seat*) to sit.
 - **Press it again while seated** to cycle to the next variation of the current pose.
 - **Move** (WASD / jump / sneak / sprint) to stand back up.
 - **Right-click a stair with an empty hand** to snap onto it and sit (can be disabled in the config).
@@ -34,7 +34,7 @@ on the [Player Animation Library](https://modrinth.com/mod/player-animation-libr
 
 ### How the pose is chosen
 
-When you press the key, Seatify checks these in order and uses the **first** match:
+When you press the key, Take a Seat checks these in order and uses the **first** match:
 
 | Priority | Trigger | Pose (animation variants) | Notes |
 |---:|---|---|---|
@@ -49,7 +49,7 @@ When you press the key, Seatify checks these in order and uses the **first** mat
 | 9 | **Standing on a bed** | `bedlyingdown` 1–3 | Lie down, 3 variants |
 | 10 | **Standing on a bottom slab** | `chairsitting` 1–4 | Treated as a chair |
 | 11 | **Standing on a carpet** | ground poses | Treated as floor |
-| 12 | **Standing on a `#seatify:sittable` block** | `chairsitting` 1–4 | Datapack-defined chairs (incl. modded) |
+| 12 | **Standing on a `#takeaseat:sittable` block** | `chairsitting` 1–4 | Datapack-defined chairs (incl. modded) |
 | 13 | **Anywhere else (ground)** | `kneesitting`, `buttsit`, `buttsit2`, `kneeleaning` | Default, 4 variants |
 
 Because the list is checked top-down, **what you're looking at or holding wins over what you're standing
@@ -73,7 +73,7 @@ That's **20 hand-made animations** in total, cycled per category by tapping the 
 
 ## Configuration
 
-Edit `config/SeatifyConfig.json` (created on first launch):
+Edit `config/TakeASeatConfig.json` (created on first launch):
 
 | Option | Default | Description |
 |---|---|---|
@@ -89,14 +89,14 @@ Edit `config/SeatifyConfig.json` (created on first launch):
 
 ## Multiplayer
 
-Seatify syncs poses to other players: when you sit, your client tells the server, which relays it so
-everyone running Seatify mirrors your animation. The mod should be installed on the server and on each
+Take a Seat syncs poses to other players: when you sit, your client tells the server, which relays it so
+everyone running Take a Seat mirrors your animation. The mod should be installed on the server and on each
 client that wants to *see* the animations. Players who were **already sitting when you join** are synced
 to you automatically (no need for them to re-sit).
 
 ## For datapack / modpack makers
 
-Make any block sittable (it'll use the chair pose) by adding it to the **`#seatify:sittable`** block tag —
+Make any block sittable (it'll use the chair pose) by adding it to the **`#takeaseat:sittable`** block tag —
 create `data/<your_pack>/tags/block/sittable.json`:
 
 ```json

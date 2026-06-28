@@ -1,6 +1,6 @@
-package com.seatify.network;
+package com.takeaseat.network;
 
-import com.seatify.Seatify;
+import com.takeaseat.TakeASeat;
 import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
@@ -20,14 +20,14 @@ import java.util.concurrent.ConcurrentHashMap;
  * Both-sides networking. The client tells the server "player X started/stopped sitting with animation Y";
  * the server simply re-broadcasts that to every connected client so everyone mirrors the pose.
  */
-public final class SeatifyNetworking {
-	public static final Identifier START_SIT_ID = Seatify.id("start_sit");
-	public static final Identifier STOP_SIT_ID = Seatify.id("stop_sit");
+public final class TakeASeatNetworking {
+	public static final Identifier START_SIT_ID = TakeASeat.id("start_sit");
+	public static final Identifier STOP_SIT_ID = TakeASeat.id("stop_sit");
 
 	/** Server-side record of who is currently sitting (and with which animation), for resyncing late joiners. */
 	private static final Map<UUID, Identifier> SITTING = new ConcurrentHashMap<>();
 
-	private SeatifyNetworking() {}
+	private TakeASeatNetworking() {}
 
 	/** Sent when a player begins a sitting animation. Carries who, and which animation. */
 	public record StartSitPayload(UUID playerUuid, Identifier animId) implements CustomPacketPayload {
