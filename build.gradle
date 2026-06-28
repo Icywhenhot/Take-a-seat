@@ -70,10 +70,10 @@ dependencies {
 	// list each embedded module explicitly. If the user *does* have PAL installed standalone,
 	// FML's version negotiation loads a single copy within the declared ranges.
 	jarJar("com.zigythebird.playeranim:PlayerAnimationLibNeo") {
-		version { strictly "[1.2.4+mc.26.1,2.0.0)"; prefer project.pal_version }
+		version { strictly "[1.2.4+mc.26.2,2.0.0)"; prefer project.pal_version }
 	}
 	jarJar("com.zigythebird.playeranim:PlayerAnimationLibCore") {
-		version { strictly "[1.2.4+mc.26.1,2.0.0)"; prefer project.pal_version }
+		version { strictly "[1.2.4+mc.26.2,2.0.0)"; prefer project.pal_version }
 	}
 	jarJar("org.redlance.common-utils:services") {
 		version { strictly "[1.2.8,2.0.0)"; prefer "1.2.8" }

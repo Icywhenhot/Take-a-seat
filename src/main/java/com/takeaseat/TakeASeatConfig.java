@@ -1,4 +1,4 @@
-package com.seatify;
+package com.takeaseat;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -14,7 +14,7 @@ import java.nio.file.Path;
  * Simple JSON config, stored at {@code config/TakeASeatConfig.json}.
  * Mirrors the original mod's options.
  */
-public class SeatifyConfig {
+public class TakeASeatConfig {
 	private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
 	private static final Path CONFIG_PATH = FMLPaths.CONFIGDIR.get().resolve("TakeASeatConfig.json");
 	private static final Path LEGACY_CONFIG_PATH = FMLPaths.CONFIGDIR.get().resolve("SeatifyConfig.json");
@@ -37,11 +37,11 @@ public class SeatifyConfig {
 	/** Seconds of no movement input before the AFK auto-sit kicks in. */
 	public int afkSitDelaySeconds = 60;
 
-	private static SeatifyConfig instance;
+	private static TakeASeatConfig instance;
 
-	public static SeatifyConfig getConfig() {
+	public static TakeASeatConfig getConfig() {
 		if (instance == null) {
-			instance = new SeatifyConfig();
+			instance = new TakeASeatConfig();
 			instance.loadConfig();
 		}
 		return instance;
@@ -51,7 +51,7 @@ public class SeatifyConfig {
 		Path loadPath = Files.exists(CONFIG_PATH) ? CONFIG_PATH : LEGACY_CONFIG_PATH;
 		if (Files.exists(loadPath)) {
 			try (Reader reader = Files.newBufferedReader(loadPath)) {
-				SeatifyConfig loaded = GSON.fromJson(reader, SeatifyConfig.class);
+				TakeASeatConfig loaded = GSON.fromJson(reader, TakeASeatConfig.class);
 				if (loaded != null) {
 					this.enableClickToSit = loaded.enableClickToSit;
 					this.enableThirdPersonOnSit = loaded.enableThirdPersonOnSit;
@@ -62,7 +62,7 @@ public class SeatifyConfig {
 					this.afkSitDelaySeconds = loaded.afkSitDelaySeconds;
 				}
 			} catch (IOException e) {
-				Seatify.LOGGER.error("Failed to read TakeASeatConfig.json", e);
+				TakeASeat.LOGGER.error("Failed to read TakeASeatConfig.json", e);
 			}
 		} else {
 			this.saveConfig();
@@ -79,7 +79,7 @@ public class SeatifyConfig {
 				Files.deleteIfExists(LEGACY_CONFIG_PATH);
 			}
 		} catch (IOException e) {
-			Seatify.LOGGER.error("Failed to write TakeASeatConfig.json", e);
+			TakeASeat.LOGGER.error("Failed to write TakeASeatConfig.json", e);
 		}
 	}
 }

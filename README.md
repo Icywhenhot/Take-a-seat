@@ -4,7 +4,7 @@ Sit, lounge, and relax. Press a key and Take a Seat plays a **context-aware sitt
 player — it figures out *what* you're near or holding and picks a fitting pose, then keeps your model
 in frame with a smooth camera. Other players see you sitting too (when they also have the mod).
 
-Take a Seat is a from-scratch rebuild of the discontinued **Sitting Plus** for Minecraft **26.1.2**, running
+Take a Seat is a from-scratch rebuild of the discontinued **Sitting Plus** for Minecraft **26.2**, running
 on the [Player Animation Library](https://modrinth.com/mod/player-animation-library) backend and ported to
 NeoForge.
 
@@ -17,8 +17,8 @@ NeoForge.
 
 | Mod | Version |
 |---|---|
-| Minecraft | 26.1.2 |
-| NeoForge | 26.1.2.76+ |
+| Minecraft | 26.2 |
+| NeoForge | 26.2.0.7-beta+ |
 | Player Animation Library | bundled in this port |
 
 ---
@@ -48,7 +48,7 @@ When you press the key, Take a Seat checks these in order and uses the **first**
 | 9 | **Standing on a bed** | `bedlyingdown` 1–3 | Lie down, 3 variants |
 | 10 | **Standing on a bottom slab** | `chairsitting` 1–4 | Treated as a chair |
 | 11 | **Standing on a carpet** | ground poses | Treated as floor |
-| 12 | **Standing on a `#seatify:sittable` block** | `chairsitting` 1–4 | Datapack-defined chairs (incl. modded) |
+| 12 | **Standing on a `#takeaseat:sittable` block** | `chairsitting` 1–4 | Datapack-defined chairs (incl. modded) |
 | 13 | **Anywhere else (ground)** | `kneesitting`, `buttsit`, `buttsit2`, `kneeleaning` | Default, 4 variants |
 
 Because the list is checked top-down, **what you're looking at or holding wins over what you're standing
@@ -97,7 +97,7 @@ to you automatically (no need for them to re-sit).
 
 ## For datapack / modpack makers
 
-Make any block sittable (it'll use the chair pose) by adding it to the **`#seatify:sittable`** block tag —
+Make any block sittable (it'll use the chair pose) by adding it to the **`#takeaseat:sittable`** block tag —
 create `data/<your_pack>/tags/block/sittable.json`:
 
 ```json
@@ -114,7 +114,7 @@ Bottom slabs and carpets are recognized automatically, so you only need the tag 
 ./gradlew build
 ```
 
-The mod sources target **Java 25** (Mojang ships Java 25 to players in 26.1.2); the Gradle build will
+The mod sources target **Java 25** (Mojang ships Java 25 to players in 26.2); the Gradle build will
 auto-provision a JDK 25 toolchain via the foojay resolver if one isn't installed. The output jar lands
 in `build/libs/`. To test in-game: `./gradlew runClient`.
 
