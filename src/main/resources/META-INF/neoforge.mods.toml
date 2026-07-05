@@ -15,14 +15,14 @@ logoFile="assets/takeaseat/icon.png"
 [[dependencies.${mod_id}]]
 modId="neoforge"
 type="required"
-versionRange="[21.10.64,)"
+versionRange="[21.1.235,)"
 ordering="NONE"
 side="BOTH"
 
 [[dependencies.${mod_id}]]
 modId="minecraft"
 type="required"
-versionRange="[${minecraft_version},${minecraft_version}]"
+versionRange="[${minecraft_version},)"
 ordering="NONE"
 side="BOTH"
 

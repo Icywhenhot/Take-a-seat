@@ -2,8 +2,10 @@ package com.takeaseat.network;
 
 import com.takeaseat.TakeASeat;
 import net.minecraft.core.UUIDUtil;
+import com.takeaseat.client.TakeASeatClientNetworking;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.network.protocol.PacketFlow;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
@@ -63,8 +65,24 @@ public final class TakeASeatNetworking {
 
 	public static void registerPayloadHandlers(RegisterPayloadHandlersEvent event) {
 		PayloadRegistrar registrar = event.registrar("1");
-		registrar.playBidirectional(StartSitPayload.TYPE, StartSitPayload.CODEC, TakeASeatNetworking::handleStartSit);
-		registrar.playBidirectional(StopSitPayload.TYPE, StopSitPayload.CODEC, TakeASeatNetworking::handleStopSit);
+		// NeoForge 21.1 has no separate client-payload event: a payload's client- and server-bound
+		// handlers are both registered here, dispatched by direction. The client-only class
+		// (TakeASeatClientNetworking, which imports PAL) is referenced solely inside the CLIENTBOUND
+		// branch, so it is never classloaded on a dedicated server.
+		registrar.playBidirectional(StartSitPayload.TYPE, StartSitPayload.CODEC, (payload, context) -> {
+			if (context.flow() == PacketFlow.CLIENTBOUND) {
+				TakeASeatClientNetworking.handleStartSit(payload, context);
+			} else {
+				handleStartSit(payload, context);
+			}
+		});
+		registrar.playBidirectional(StopSitPayload.TYPE, StopSitPayload.CODEC, (payload, context) -> {
+			if (context.flow() == PacketFlow.CLIENTBOUND) {
+				TakeASeatClientNetworking.handleStopSit(payload, context);
+			} else {
+				handleStopSit(payload, context);
+			}
+		});
 	}
 
 	private static void handleStartSit(StartSitPayload payload, IPayloadContext context) {

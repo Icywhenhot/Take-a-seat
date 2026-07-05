@@ -11,6 +11,8 @@ import com.zigythebird.playeranimcore.enums.PlayState;
 import net.minecraft.client.CameraType;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.player.AbstractClientPlayer;
+import net.minecraft.client.player.Input;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -21,7 +23,6 @@ import net.minecraft.tags.ItemTags;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
-import net.minecraft.world.entity.player.Input;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.FishingRodItem;
 import net.minecraft.world.item.ItemStack;
@@ -80,8 +81,8 @@ public final class TakeASeatClient {
 	}
 
 	public static void registerKeyMappings(RegisterKeyMappingsEvent event) {
-		KeyMapping.Category category = KeyMapping.Category.register(TakeASeat.id("sit"));
-		sitKey = new KeyMapping("key.takeaseat.sit", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_X, category);
+		// 1.21.1 has no typed KeyMapping.Category; the category is a translation key (see lang file).
+		sitKey = new KeyMapping("key.takeaseat.sit", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_X, "key.categories.takeaseat.sit");
 		event.register(sitKey);
 
 		// Attach a sitting animation controller to every client player (local + remote).
@@ -150,8 +151,8 @@ public final class TakeASeatClient {
 			return;
 		}
 
-		Input in = player.input.keyPresses;
-		boolean moving = in.forward() || in.backward() || in.left() || in.right() || in.jump() || in.shift() || in.sprint();
+		Input in = player.input;
+		boolean moving = in.up || in.down || in.left || in.right || in.jumping || in.shiftKeyDown || player.isSprinting();
 		if (moving) lastActivityMs = System.currentTimeMillis();
 
 		if (sitKey != null && sitKey.consumeClick() && client.screen == null) {
@@ -315,7 +316,8 @@ public final class TakeASeatClient {
 	}
 
 	private static PlayerAnimationController controllerFor(Player player) {
-		IAnimation layer = PlayerAnimationAccess.getPlayerAnimationLayer(player, SIT_LAYER);
+		if (!(player instanceof AbstractClientPlayer clientPlayer)) return null;
+		IAnimation layer = PlayerAnimationAccess.getPlayerAnimationLayer(clientPlayer, SIT_LAYER);
 		return layer instanceof PlayerAnimationController controller ? controller : null;
 	}
 

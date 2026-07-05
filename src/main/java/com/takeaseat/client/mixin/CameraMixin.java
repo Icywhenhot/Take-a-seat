@@ -18,7 +18,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
  */
 @Mixin(Camera.class)
 public abstract class CameraMixin {
-	@Shadow public abstract Vec3 position();
+	@Shadow public abstract Vec3 getPosition();
 
 	@Shadow protected abstract void setPosition(Vec3 position);
 
@@ -42,7 +42,7 @@ public abstract class CameraMixin {
 		}
 
 		if (this.takeaseat$smoothOffset > 1.0e-4) {
-			Vec3 p = this.position();
+			Vec3 p = this.getPosition();
 			this.setPosition(new Vec3(p.x, p.y - this.takeaseat$smoothOffset, p.z));
 		}
 	}

@@ -9,8 +9,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.AbstractClientPlayer;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Player;
-import net.neoforged.neoforge.client.network.ClientPacketDistributor;
-import net.neoforged.neoforge.client.network.event.RegisterClientPayloadHandlersEvent;
+import net.neoforged.neoforge.network.PacketDistributor;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 import java.util.Map;
@@ -29,12 +28,7 @@ public final class TakeASeatClientNetworking {
 
 	private static final Map<UUID, ResourceLocation> REMOTE_SITS = new ConcurrentHashMap<>();
 
-	public static void registerClientReceivers(RegisterClientPayloadHandlersEvent event) {
-		event.register(StartSitPayload.TYPE, TakeASeatClientNetworking::handleStartSit);
-		event.register(StopSitPayload.TYPE, TakeASeatClientNetworking::handleStopSit);
-	}
-
-	private static void handleStartSit(StartSitPayload payload, IPayloadContext context) {
+	public static void handleStartSit(StartSitPayload payload, IPayloadContext context) {
 		context.enqueueWork(() -> {
 			Minecraft client = Minecraft.getInstance();
 			Player self = client.player;
@@ -45,7 +39,7 @@ public final class TakeASeatClientNetworking {
 		});
 	}
 
-	private static void handleStopSit(StopSitPayload payload, IPayloadContext context) {
+	public static void handleStopSit(StopSitPayload payload, IPayloadContext context) {
 		context.enqueueWork(() -> {
 			Minecraft client = Minecraft.getInstance();
 			REMOTE_SITS.remove(payload.playerUuid());
@@ -83,15 +77,16 @@ public final class TakeASeatClientNetworking {
 	}
 
 	private static PlayerAnimationController controllerFor(Player player) {
-		IAnimation layer = PlayerAnimationAccess.getPlayerAnimationLayer(player, TakeASeatClient.SIT_LAYER);
+		if (!(player instanceof AbstractClientPlayer clientPlayer)) return null;
+		IAnimation layer = PlayerAnimationAccess.getPlayerAnimationLayer(clientPlayer, TakeASeatClient.SIT_LAYER);
 		return layer instanceof PlayerAnimationController controller ? controller : null;
 	}
 
 	public static void sendStartSit(UUID uuid, ResourceLocation anim) {
-		ClientPacketDistributor.sendToServer(new StartSitPayload(uuid, anim));
+		PacketDistributor.sendToServer(new StartSitPayload(uuid, anim));
 	}
 
 	public static void sendStopSit(UUID uuid) {
-		ClientPacketDistributor.sendToServer(new StopSitPayload(uuid));
+		PacketDistributor.sendToServer(new StopSitPayload(uuid));
 	}
 }
