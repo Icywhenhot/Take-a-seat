@@ -53,9 +53,17 @@ dependencies {
 
 	// Player Animation Library backend (NeoForge build for MC 1.21.1).
 	//
+	// This is NOT jar-in-jar'd. PAL's NeoForge distribution jar bundles PlayerAnimationLibCore's
+	// classes directly into its own module (it isn't packaged as a nested jar-in-jar artifact), so
+	// jarJar-ing our own copy of PlayerAnimationLibCore alongside a standalone PAL install causes a
+	// JPMS split-package ResolutionException at startup: two separate modules both export
+	// com.zigythebird.playeranimcore.loading, and NeoForge's jar-in-jar version negotiation has no
+	// way to recognize the standalone jar as satisfying the embedded one. Requiring PAL as a normal
+	// mod dependency (see neoforge.mods.toml) avoids that class of conflict entirely.
+	//
 	// On the compile/runtime classpath we only need the Neo artifact; it transitively pulls
-	// Core, mochafloats and javassist. We exclude the libraries Minecraft already ships (and pins
-	// via `strictly` version constraints) so they don't conflict at compile time.
+	// Core, mochafloats and javassist. We exclude the libraries Minecraft already ships so they
+	// don't conflict at compile time.
 	implementation("com.zigythebird.playeranim:PlayerAnimationLibNeo:${project.pal_version}") {
 		exclude group: "com.google.code.gson"
 		exclude group: "org.slf4j"
@@ -63,23 +71,6 @@ dependencies {
 		exclude group: "io.netty"
 		exclude group: "org.joml"
 		exclude group: "org.jetbrains", module: "annotations"
-	}
-
-	// Bundle PAL and its (non-Minecraft) dependencies into our jar via Jar-in-Jar, so end users
-	// don't have to install Player Animation Library separately. jarJar is not transitive, so we
-	// list each embedded module explicitly. If the user *does* have PAL installed standalone,
-	// FML's version negotiation loads a single copy within the declared ranges.
-	jarJar("com.zigythebird.playeranim:PlayerAnimationLibNeo") {
-		version { strictly "[1.1.4+mc.1.21.1,2.0.0)"; prefer project.pal_version }
-	}
-	jarJar("com.zigythebird.playeranim:PlayerAnimationLibCore") {
-		version { strictly "[1.1.4+mc.1.21.1,2.0.0)"; prefer project.pal_version }
-	}
-	jarJar("com.zigythebird:mochafloats") {
-		version { strictly "[4.1.0,5.0.0)"; prefer "4.1.0" }
-	}
-	jarJar("org.javassist:javassist") {
-		version { strictly "[3.30.2-GA,4.0.0)"; prefer "3.30.2-GA" }
 	}
 }
 
@@ -94,7 +85,8 @@ processResources {
 				mod_license: project.mod_license,
 				mod_name: project.mod_name,
 				mod_version: project.mod_version,
-				neo_version: project.neo_version
+				neo_version: project.neo_version,
+				pal_version: project.pal_version
 		)
 	}
 }

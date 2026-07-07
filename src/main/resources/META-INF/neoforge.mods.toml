@@ -26,5 +26,12 @@ versionRange="[${minecraft_version},)"
 ordering="NONE"
 side="BOTH"
 
+[[dependencies.${mod_id}]]
+modId="player_animation_library"
+type="required"
+versionRange="[${pal_version},)"
+ordering="NONE"
+side="BOTH"
+
 [[mixins]]
 config="takeaseat.client.mixins.json"

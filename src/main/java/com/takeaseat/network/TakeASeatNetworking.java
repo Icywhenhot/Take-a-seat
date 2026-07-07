@@ -21,20 +21,14 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
-/**
- * Both-sides networking. The client tells the server "player X started/stopped sitting with animation Y";
- * the server simply re-broadcasts that to every connected client so everyone mirrors the pose.
- */
 public final class TakeASeatNetworking {
 	public static final ResourceLocation START_SIT_ID = TakeASeat.id("start_sit");
 	public static final ResourceLocation STOP_SIT_ID = TakeASeat.id("stop_sit");
 
-	/** Server-side record of who is currently sitting (and with which animation), for resyncing late joiners. */
 	private static final Map<UUID, ResourceLocation> SITTING = new ConcurrentHashMap<>();
 
 	private TakeASeatNetworking() {}
 
-	/** Sent when a player begins a sitting animation. Carries who, and which animation. */
 	public record StartSitPayload(UUID playerUuid, ResourceLocation animId) implements CustomPacketPayload {
 		public static final Type<StartSitPayload> TYPE = new Type<>(START_SIT_ID);
 		public static final StreamCodec<RegistryFriendlyByteBuf, StartSitPayload> CODEC = StreamCodec.composite(
@@ -49,7 +43,6 @@ public final class TakeASeatNetworking {
 		}
 	}
 
-	/** Sent when a player stops sitting. */
 	public record StopSitPayload(UUID playerUuid) implements CustomPacketPayload {
 		public static final Type<StopSitPayload> TYPE = new Type<>(STOP_SIT_ID);
 		public static final StreamCodec<RegistryFriendlyByteBuf, StopSitPayload> CODEC = StreamCodec.composite(
@@ -65,10 +58,6 @@ public final class TakeASeatNetworking {
 
 	public static void registerPayloadHandlers(RegisterPayloadHandlersEvent event) {
 		PayloadRegistrar registrar = event.registrar("1");
-		// NeoForge 21.1 has no separate client-payload event: a payload's client- and server-bound
-		// handlers are both registered here, dispatched by direction. The client-only class
-		// (TakeASeatClientNetworking, which imports PAL) is referenced solely inside the CLIENTBOUND
-		// branch, so it is never classloaded on a dedicated server.
 		registrar.playBidirectional(StartSitPayload.TYPE, StartSitPayload.CODEC, (payload, context) -> {
 			if (context.flow() == PacketFlow.CLIENTBOUND) {
 				TakeASeatClientNetworking.handleStartSit(payload, context);
@@ -87,7 +76,6 @@ public final class TakeASeatNetworking {
 
 	private static void handleStartSit(StartSitPayload payload, IPayloadContext context) {
 		context.enqueueWork(() -> {
-			// Serverbound: context.player() is the sending ServerPlayer.
 			if (!(context.player() instanceof ServerPlayer)) {
 				return;
 			}
