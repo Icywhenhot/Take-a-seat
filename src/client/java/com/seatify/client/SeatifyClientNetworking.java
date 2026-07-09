@@ -1,5 +1,6 @@
 package com.seatify.client;
 
+import com.seatify.Seatify;
 import com.seatify.network.SeatifyNetworking.StartSitPayload;
 import com.seatify.network.SeatifyNetworking.StopSitPayload;
 import com.zigythebird.playeranim.animation.PlayerAnimationController;
@@ -35,14 +36,36 @@ public final class SeatifyClientNetworking {
 					if (self != null && self.getUUID().equals(payload.playerUuid())) return; // we animate ourselves
 					REMOTE_SITS.put(payload.playerUuid(), payload.animId());
 					PlayerAnimationController controller = controllerFor(context.client(), payload.playerUuid());
-					if (controller != null) controller.triggerAnimation(payload.animId());
+					boolean applied = controller != null && controller.triggerAnimation(payload.animId());
+					Seatify.LOGGER.info("[Seatify][net] recv StartSit for {} anim={} applied={} (entityLoaded={})",
+							shortId(payload.playerUuid()), payload.animId().getPath(), applied, controller != null);
 				}));
 
 		ClientPlayNetworking.registerGlobalReceiver(StopSitPayload.TYPE, (payload, context) ->
 				context.client().execute(() -> {
+					Player self = context.client().player;
+					// Skip our own echo, exactly like the StartSit receiver does. The local player's stop is
+					// driven directly by SeatifyClient#standUp; letting a delayed self-echo also call stop()
+					// here can land on top of a fresh re-sit and, if it hits before the new animation commits,
+					// resurrect it into a stuck pose. The server broadcasts to everyone including the sender,
+					// so without this guard we would always double-handle ourselves.
+					if (self != null && self.getUUID().equals(payload.playerUuid())) {
+						REMOTE_SITS.remove(payload.playerUuid());
+						Seatify.LOGGER.debug("[Seatify][net] recv StopSit for self — ignored (local stand handled by standUp)");
+						return;
+					}
 					REMOTE_SITS.remove(payload.playerUuid());
 					PlayerAnimationController controller = controllerFor(context.client(), payload.playerUuid());
-					if (controller != null) controller.stop();
+					if (controller != null) {
+						// stopTriggeredAnimation() before stop() so the stop is durable even when a
+						// StartSit+StopSit pair arrives within a single tick (same resurrection race as the
+						// local player — see SeatifyClient#standUp). Without it a remote player can get stuck
+						// in the sit pose.
+						controller.stopTriggeredAnimation();
+						controller.stop();
+					}
+					Seatify.LOGGER.info("[Seatify][net] recv StopSit for {} stopped={}",
+							shortId(payload.playerUuid()), controller != null);
 				}));
 
 		ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> REMOTE_SITS.clear());
@@ -58,8 +81,15 @@ public final class SeatifyClientNetworking {
 			PlayerAnimationController controller = controllerFor(p);
 			if (controller != null && !controller.isActive()) {
 				controller.triggerAnimation(id);
+				Seatify.LOGGER.info("[Seatify][net] reconcile re-applied sit {} to {} (entity loaded in late)",
+						id.getPath(), shortId(p.getUUID()));
 			}
 		}
+	}
+
+	/** First 8 chars of a UUID — enough to correlate log lines without dumping the whole thing. */
+	private static String shortId(UUID uuid) {
+		return uuid.toString().substring(0, 8);
 	}
 
 	private static PlayerAnimationController controllerFor(Minecraft client, UUID uuid) {
@@ -78,10 +108,12 @@ public final class SeatifyClientNetworking {
 	}
 
 	public static void sendStartSit(UUID uuid, Identifier anim) {
+		Seatify.LOGGER.info("[Seatify][net] send StartSit anim={}", anim.getPath());
 		ClientPlayNetworking.send(new StartSitPayload(uuid, anim));
 	}
 
 	public static void sendStopSit(UUID uuid) {
+		Seatify.LOGGER.info("[Seatify][net] send StopSit");
 		ClientPlayNetworking.send(new StopSitPayload(uuid));
 	}
 }
