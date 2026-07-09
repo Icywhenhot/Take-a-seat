@@ -69,6 +69,8 @@ public final class TakeASeatNetworking {
 			MinecraftServer server = sender.level().getServer();
 			if (server == null) return;
 			SITTING.put(payload.playerUuid(), payload.animId());
+			TakeASeat.LOGGER.info("[TakeASeat][server] StartSit from {} anim={} — rebroadcasting to {} player(s)",
+					sender.getName().getString(), payload.animId().getPath(), server.getPlayerList().getPlayers().size());
 			server.execute(() -> {
 				for (ServerPlayer p : server.getPlayerList().getPlayers()) {
 					ServerPlayNetworking.send(p, payload);
@@ -81,6 +83,8 @@ public final class TakeASeatNetworking {
 			MinecraftServer server = sender.level().getServer();
 			if (server == null) return;
 			SITTING.remove(payload.playerUuid());
+			TakeASeat.LOGGER.info("[TakeASeat][server] StopSit from {} — rebroadcasting to {} player(s)",
+					sender.getName().getString(), server.getPlayerList().getPlayers().size());
 			server.execute(() -> {
 				for (ServerPlayer p : server.getPlayerList().getPlayers()) {
 					ServerPlayNetworking.send(p, payload);
