@@ -76,20 +76,24 @@ public final class TakeASeatNetworking {
 
 	private static void handleStartSit(StartSitPayload payload, IPayloadContext context) {
 		context.enqueueWork(() -> {
-			if (!(context.player() instanceof ServerPlayer)) {
+			if (!(context.player() instanceof ServerPlayer sender)) {
 				return;
 			}
 			SITTING.put(payload.playerUuid(), payload.animId());
+			TakeASeat.LOGGER.info("[TakeASeat][server] StartSit from {} anim={} — rebroadcasting to all players",
+					sender.getName().getString(), payload.animId().getPath());
 			PacketDistributor.sendToAllPlayers(payload);
 		});
 	}
 
 	private static void handleStopSit(StopSitPayload payload, IPayloadContext context) {
 		context.enqueueWork(() -> {
-			if (!(context.player() instanceof ServerPlayer)) {
+			if (!(context.player() instanceof ServerPlayer sender)) {
 				return;
 			}
 			SITTING.remove(payload.playerUuid());
+			TakeASeat.LOGGER.info("[TakeASeat][server] StopSit from {} — rebroadcasting to all players",
+					sender.getName().getString());
 			PacketDistributor.sendToAllPlayers(payload);
 		});
 	}

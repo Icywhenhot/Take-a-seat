@@ -58,6 +58,10 @@ public final class TakeASeatClient {
 	private static int animationState = 0;
 	private static long lastActivityMs = System.currentTimeMillis();
 
+	// --- diagnostics: track the controller's real animation state so we can flag desyncs ---
+	private static boolean diagPrevActive = false;
+	private static boolean diagWarnedDesync = false;
+
 	private static final ResourceLocation[] GROUND = ids("kneesitting", "buttsit", "buttsit2", "kneeleaning");
 	private static final ResourceLocation[] STAIRS = ids("chairsitting", "chairsitting2", "chairsitting3", "chairsitting4");
 	private static final ResourceLocation[] FENCES = ids("fencesitting", "fencesitting2");
@@ -146,37 +150,57 @@ public final class TakeASeatClient {
 		}
 
 		Input in = player.input;
-		boolean moving = in.up || in.down || in.left || in.right || in.jumping || in.shiftKeyDown || player.isSprinting();
+		// Directional keys + jump + sneak only. Deliberately NOT sprint: isSprinting() stays true the whole
+		// time the sprint key is held (many players hold it permanently), which would make `moving`
+		// perpetually true and stand you up the instant you sit. This mirrors the original mod, which
+		// checked movementForward/Sideways + jumping + sneaking and never looked at sprint.
+		boolean moving = in.up || in.down || in.left || in.right || in.jumping || in.shiftKeyDown;
 		if (moving) lastActivityMs = System.currentTimeMillis();
 
+		PlayerAnimationController controller = controllerFor(player);
+
+		boolean pressedSitThisTick = false;
 		if (sitKey != null && sitKey.consumeClick() && client.screen == null) {
-			PlayerAnimationController controller = controllerFor(player);
 			if (controller != null) {
+				TakeASeat.LOGGER.info("[TakeASeat] sit key pressed (isSitting={}, moving={})", isSitting, moving);
 				handleSitPress(player, controller);
+				pressedSitThisTick = true;
+			} else {
+				TakeASeat.LOGGER.warn("[TakeASeat] sit key pressed but the local player has no animation controller");
 			}
 		}
 
-		if (isSitting && moving) {
-			standUp(controllerFor(player), player);
+		// Moving cancels the sit (this is the only path that restores the camera).
+		// Never cancel on the same tick we just (re)triggered a sit: the animation hasn't been committed
+		// yet, so stopping it now would leave a dangling triggered animation that the next render frame
+		// re-applies — a "resurrected" pose that can no longer be cancelled. Skipping one tick lets the
+		// trigger commit; if the player is still moving next tick, the cancel fires cleanly then.
+		if (isSitting && moving && !pressedSitThisTick) {
+			standUp(controller, player, "movement[" + heldMovementKeys(in) + "]");
 			animationState = 0;
 		}
 
 		TakeASeatConfig cfg = TakeASeatConfig.getConfig();
 		if (cfg.enableAfkSit && !isSitting && client.screen == null && canSit(player)) {
 			long delayMs = cfg.afkSitDelaySeconds * 1000L;
-			if (System.currentTimeMillis() - lastActivityMs >= delayMs) {
-				PlayerAnimationController controller = controllerFor(player);
-				if (controller != null) {
-					playAnimation(controller, player, GROUND);
-				}
+			if (System.currentTimeMillis() - lastActivityMs >= delayMs && controller != null) {
+				TakeASeat.LOGGER.info("[TakeASeat] AFK auto-sit firing after {}s idle", cfg.afkSitDelaySeconds);
+				playAnimation(controller, player, GROUND);
 			}
 		}
+
+		// Watchdog: flag the instant our sit flag disagrees with the real animation state.
+		runDiagnostics(controller);
 
 		TakeASeatClientNetworking.reconcile(client);
 	}
 
 	private static void handleSitPress(LocalPlayer player, PlayerAnimationController controller) {
-		if (!canSit(player)) return;
+		if (!canSit(player)) {
+			TakeASeat.LOGGER.info("[TakeASeat] sit blocked (canSit=false): onGround={} passenger={} inWater={} swimming={} fallFlying={} sleeping={}",
+					player.onGround(), player.isPassenger(), player.isInWater(), player.isSwimming(), player.isFallFlying(), player.isSleeping());
+			return;
+		}
 		Level level = player.level();
 
 		Vec3 eye = player.getEyePosition();
@@ -253,8 +277,11 @@ public final class TakeASeatClient {
 		if (animationState < 0 || animationState >= animations.length) animationState = 0;
 
 		ResourceLocation id = animations[animationState];
-		if (controller.triggerAnimation(id)) {
-			boolean wasSitting = isSitting;
+		boolean wasSitting = isSitting;
+		boolean triggered = controller.triggerAnimation(id);
+		TakeASeat.LOGGER.info("[TakeASeat] SIT anim={} variantIdx={} wasSitting={} triggerOk={}",
+				id.getPath(), animationState, wasSitting, triggered);
+		if (triggered) {
 			isSitting = true;
 			TakeASeatClientNetworking.sendStartSit(player.getUUID(), id);
 			animationState = (animationState + 1) % animations.length;
@@ -262,17 +289,72 @@ public final class TakeASeatClient {
 			if (!wasSitting) {
 				setThirdPersonIfEnabled();
 			}
+		} else {
+			// The layer id is registered but this animation name isn't in buttsit.json (or failed to load).
+			TakeASeat.LOGGER.warn("[TakeASeat] SIT failed: triggerAnimation returned false for '{}' — animation missing from the resource pack?", id);
 		}
 	}
 
-	private static void standUp(PlayerAnimationController controller, LocalPlayer player) {
-		if (!isSitting || controller == null) return;
+	private static void standUp(PlayerAnimationController controller, LocalPlayer player, String reason) {
+		if (!isSitting || controller == null) {
+			TakeASeat.LOGGER.debug("[TakeASeat] stand ignored (reason={}): isSitting={} controllerNull={}", reason, isSitting, controller == null);
+			return;
+		}
+		// Clear the deferred triggered animation BEFORE stop(). stop() alone only sets the state to
+		// STOPPED and leaves triggeredAnimation set; if we stood up in the same tick we sat (e.g. tapping
+		// the sit key while a movement key is held), the animation hasn't been committed to
+		// currentRawAnimation yet, so the next frame would rebuild and "resurrect" it — leaving us stuck
+		// in the pose with isSitting already false, uncancellable until relog. stopTriggeredAnimation()
+		// forgets the trigger so the stop actually sticks.
+		boolean clearedTrigger = controller.stopTriggeredAnimation();
 		controller.stop();
 		isSitting = false;
 		TakeASeatClientNetworking.sendStopSit(player.getUUID());
+		TakeASeat.LOGGER.info("[TakeASeat] STAND reason={} clearedTrigger={}", reason, clearedTrigger);
 		if (TakeASeatConfig.getConfig().enableThirdPersonOnSit && previousPerspective != null) {
 			Minecraft.getInstance().options.setCameraType(previousPerspective);
 			previousPerspective = null;
+		}
+	}
+
+	/** Comma-separated list of the movement keys currently held — for the STAND log line. */
+	private static String heldMovementKeys(Input in) {
+		StringBuilder sb = new StringBuilder();
+		if (in.up) sb.append("forward,");
+		if (in.down) sb.append("backward,");
+		if (in.left) sb.append("left,");
+		if (in.right) sb.append("right,");
+		if (in.jumping) sb.append("jump,");
+		if (in.shiftKeyDown) sb.append("sneak,");
+		if (sb.length() > 0) sb.setLength(sb.length() - 1);
+		return sb.toString();
+	}
+
+	/**
+	 * Per-tick watchdog. Logs controller-active transitions, and WARNs the moment our {@link #isSitting}
+	 * flag disagrees with the controller's real animation state — the exact signature of the stuck-sit bug.
+	 */
+	private static void runDiagnostics(PlayerAnimationController controller) {
+		boolean active = controller != null && controller.isActive();
+		if (active != diagPrevActive) {
+			TakeASeat.LOGGER.info("[TakeASeat][diag] controller.isActive {} -> {} (isSitting={})", diagPrevActive, active, isSitting);
+			diagPrevActive = active;
+		}
+		if (isSitting != active) {
+			if (!diagWarnedDesync) {
+				if (!isSitting && active) {
+					TakeASeat.LOGGER.warn("[TakeASeat][diag] DESYNC: animation is ACTIVE but isSitting=false. "
+							+ "This is the stuck-sit signature (a resurrected pose); the move-to-stand path will NOT fire, "
+							+ "so the player is stuck until relog. Something stopped us mid-trigger — check the log just above for a STAND or network stop.");
+				} else {
+					TakeASeat.LOGGER.warn("[TakeASeat][diag] DESYNC: isSitting=true but the animation is NOT active. "
+							+ "The pose ended without going through standUp() (e.g. animation finished on its own or was stopped by the network).");
+				}
+				diagWarnedDesync = true;
+			}
+		} else if (diagWarnedDesync) {
+			TakeASeat.LOGGER.info("[TakeASeat][diag] desync resolved (isSitting={}, active={})", isSitting, active);
+			diagWarnedDesync = false;
 		}
 	}
 
