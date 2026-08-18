@@ -11,6 +11,7 @@ displayName="${mod_name}"
 description='''Sit, lounge, and relax. Press a key and Take a Seat plays a context-aware sitting animation on your player - it figures out what you're near or holding and picks a fitting pose, then keeps your model in frame with a smooth camera. Other players see you sitting too when they also have the mod.'''
 authors="Take a Seat"
 logoFile="assets/takeaseat/icon.png"
+displayTest="IGNORE_ALL_VERSION"
 
 [[dependencies.${mod_id}]]
 modId="neoforge"

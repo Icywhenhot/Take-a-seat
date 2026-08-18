@@ -1,17 +1,20 @@
 package com.takeaseat.client;
 
 import com.takeaseat.TakeASeat;
+import com.takeaseat.network.TakeASeatNetworking;
 import com.takeaseat.network.TakeASeatNetworking.StartSitPayload;
 import com.takeaseat.network.TakeASeatNetworking.StopSitPayload;
 import com.zigythebird.playeranim.animation.PlayerAnimationController;
 import com.zigythebird.playeranim.api.PlayerAnimationAccess;
 import com.zigythebird.playeranimcore.animation.layered.IAnimation;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.multiplayer.ClientPacketListener;
 import net.minecraft.client.player.AbstractClientPlayer;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Player;
 import net.neoforged.neoforge.network.PacketDistributor;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
+import net.neoforged.neoforge.network.registration.NetworkRegistry;
 
 import java.util.Map;
 import java.util.UUID;
@@ -39,11 +42,7 @@ public final class TakeASeatClientNetworking {
 		context.enqueueWork(() -> {
 			Minecraft client = Minecraft.getInstance();
 			Player self = client.player;
-			// Skip our own echo, exactly like handleStartSit does. The local player's stop is driven
-			// directly by TakeASeatClient#standUp; letting a delayed self-echo also call stop() here can
-			// land on top of a fresh re-sit and, if it hits before the new animation commits, resurrect it
-			// into a stuck pose. The server broadcasts to everyone including the sender, so without this
-			// guard we would always double-handle ourselves.
+
 			if (self != null && self.getUUID().equals(payload.playerUuid())) {
 				REMOTE_SITS.remove(payload.playerUuid());
 				TakeASeat.LOGGER.debug("[TakeASeat][net] recv StopSit for self — ignored (local stand handled by standUp)");
@@ -52,10 +51,7 @@ public final class TakeASeatClientNetworking {
 			REMOTE_SITS.remove(payload.playerUuid());
 			PlayerAnimationController controller = controllerFor(client, payload.playerUuid());
 			if (controller != null) {
-				// stopTriggeredAnimation() before stop() so the stop is durable even when a
-				// StartSit+StopSit pair arrives within a single tick (same resurrection race as the
-				// local player — see TakeASeatClient#standUp). Without it a remote player can get stuck
-				// in the sit pose.
+
 				controller.stopTriggeredAnimation();
 				controller.stop();
 			}
@@ -83,7 +79,6 @@ public final class TakeASeatClientNetworking {
 		}
 	}
 
-	/** First 8 chars of a UUID — enough to correlate log lines without dumping the whole thing. */
 	private static String shortId(UUID uuid) {
 		return uuid.toString().substring(0, 8);
 	}
@@ -105,12 +100,25 @@ public final class TakeASeatClientNetworking {
 	}
 
 	public static void sendStartSit(UUID uuid, ResourceLocation anim) {
+		if (!serverHasChannel(TakeASeatNetworking.START_SIT_ID)) {
+			TakeASeat.LOGGER.debug("[TakeASeat][net] server has no start_sit channel — sitting locally only");
+			return;
+		}
 		TakeASeat.LOGGER.info("[TakeASeat][net] send StartSit anim={}", anim.getPath());
 		PacketDistributor.sendToServer(new StartSitPayload(uuid, anim));
 	}
 
 	public static void sendStopSit(UUID uuid) {
+		if (!serverHasChannel(TakeASeatNetworking.STOP_SIT_ID)) {
+			TakeASeat.LOGGER.debug("[TakeASeat][net] server has no stop_sit channel — standing locally only");
+			return;
+		}
 		TakeASeat.LOGGER.info("[TakeASeat][net] send StopSit");
 		PacketDistributor.sendToServer(new StopSitPayload(uuid));
+	}
+
+	private static boolean serverHasChannel(ResourceLocation id) {
+		ClientPacketListener connection = Minecraft.getInstance().getConnection();
+		return connection != null && NetworkRegistry.hasChannel(connection, id);
 	}
 }

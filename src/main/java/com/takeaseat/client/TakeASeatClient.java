@@ -58,7 +58,6 @@ public final class TakeASeatClient {
 	private static int animationState = 0;
 	private static long lastActivityMs = System.currentTimeMillis();
 
-	// --- diagnostics: track the controller's real animation state so we can flag desyncs ---
 	private static boolean diagPrevActive = false;
 	private static boolean diagWarnedDesync = false;
 
@@ -150,10 +149,7 @@ public final class TakeASeatClient {
 		}
 
 		Input in = player.input;
-		// Directional keys + jump + sneak only. Deliberately NOT sprint: isSprinting() stays true the whole
-		// time the sprint key is held (many players hold it permanently), which would make `moving`
-		// perpetually true and stand you up the instant you sit. This mirrors the original mod, which
-		// checked movementForward/Sideways + jumping + sneaking and never looked at sprint.
+
 		boolean moving = in.up || in.down || in.left || in.right || in.jumping || in.shiftKeyDown;
 		if (moving) lastActivityMs = System.currentTimeMillis();
 
@@ -170,11 +166,6 @@ public final class TakeASeatClient {
 			}
 		}
 
-		// Moving cancels the sit (this is the only path that restores the camera).
-		// Never cancel on the same tick we just (re)triggered a sit: the animation hasn't been committed
-		// yet, so stopping it now would leave a dangling triggered animation that the next render frame
-		// re-applies — a "resurrected" pose that can no longer be cancelled. Skipping one tick lets the
-		// trigger commit; if the player is still moving next tick, the cancel fires cleanly then.
 		if (isSitting && moving && !pressedSitThisTick) {
 			standUp(controller, player, "movement[" + heldMovementKeys(in) + "]");
 			animationState = 0;
@@ -189,7 +180,6 @@ public final class TakeASeatClient {
 			}
 		}
 
-		// Watchdog: flag the instant our sit flag disagrees with the real animation state.
 		runDiagnostics(controller);
 
 		TakeASeatClientNetworking.reconcile(client);
@@ -290,7 +280,7 @@ public final class TakeASeatClient {
 				setThirdPersonIfEnabled();
 			}
 		} else {
-			// The layer id is registered but this animation name isn't in buttsit.json (or failed to load).
+
 			TakeASeat.LOGGER.warn("[TakeASeat] SIT failed: triggerAnimation returned false for '{}' — animation missing from the resource pack?", id);
 		}
 	}
@@ -300,12 +290,7 @@ public final class TakeASeatClient {
 			TakeASeat.LOGGER.debug("[TakeASeat] stand ignored (reason={}): isSitting={} controllerNull={}", reason, isSitting, controller == null);
 			return;
 		}
-		// Clear the deferred triggered animation BEFORE stop(). stop() alone only sets the state to
-		// STOPPED and leaves triggeredAnimation set; if we stood up in the same tick we sat (e.g. tapping
-		// the sit key while a movement key is held), the animation hasn't been committed to
-		// currentRawAnimation yet, so the next frame would rebuild and "resurrect" it — leaving us stuck
-		// in the pose with isSitting already false, uncancellable until relog. stopTriggeredAnimation()
-		// forgets the trigger so the stop actually sticks.
+
 		boolean clearedTrigger = controller.stopTriggeredAnimation();
 		controller.stop();
 		isSitting = false;
@@ -317,7 +302,6 @@ public final class TakeASeatClient {
 		}
 	}
 
-	/** Comma-separated list of the movement keys currently held — for the STAND log line. */
 	private static String heldMovementKeys(Input in) {
 		StringBuilder sb = new StringBuilder();
 		if (in.up) sb.append("forward,");
@@ -330,10 +314,6 @@ public final class TakeASeatClient {
 		return sb.toString();
 	}
 
-	/**
-	 * Per-tick watchdog. Logs controller-active transitions, and WARNs the moment our {@link #isSitting}
-	 * flag disagrees with the controller's real animation state — the exact signature of the stuck-sit bug.
-	 */
 	private static void runDiagnostics(PlayerAnimationController controller) {
 		boolean active = controller != null && controller.isActive();
 		if (active != diagPrevActive) {
