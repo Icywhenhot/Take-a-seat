@@ -29,6 +29,7 @@ NeoForge.
 - **Press it again while seated** to cycle to the next variation of the current pose.
 - **Move** (WASD / jump / sneak / sprint) to stand back up.
 - **Right-click a stair with an empty hand** to snap onto it and sit (can be disabled in the config).
+- Or use the **`/sit`** command: `/sit` (context detection), `/sit <pose>` to force a pose (e.g. `/sit chair`), or `/sit <pose> <variant>` (e.g. `/sit bed 2`).
 - You **can't sit while airborne, swimming/underwater, or riding** something.
 
 ### How the pose is chosen
