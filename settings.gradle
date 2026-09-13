@@ -9,5 +9,4 @@ pluginManagement {
 	}
 }
 
-// Should match your modid
-rootProject.name = 'seatify'
+rootProject.name = 'takeaseat'
