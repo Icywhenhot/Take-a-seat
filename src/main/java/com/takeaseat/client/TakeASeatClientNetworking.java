@@ -51,7 +51,6 @@ public final class TakeASeatClientNetworking {
 			REMOTE_SITS.remove(payload.playerUuid());
 			PlayerAnimationController controller = controllerFor(client, payload.playerUuid());
 			if (controller != null) {
-
 				controller.stopTriggeredAnimation();
 				controller.stop();
 			}

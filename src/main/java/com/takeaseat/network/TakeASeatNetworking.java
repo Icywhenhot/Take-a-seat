@@ -57,7 +57,6 @@ public final class TakeASeatNetworking {
 	}
 
 	public static void registerPayloadHandlers(RegisterPayloadHandlersEvent event) {
-
 		PayloadRegistrar registrar = event.registrar("1").optional();
 		registrar.playBidirectional(StartSitPayload.TYPE, StartSitPayload.CODEC, (payload, context) -> {
 			if (context.flow() == PacketFlow.CLIENTBOUND) {

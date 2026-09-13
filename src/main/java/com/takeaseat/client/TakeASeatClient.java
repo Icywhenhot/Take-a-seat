@@ -280,7 +280,6 @@ public final class TakeASeatClient {
 				setThirdPersonIfEnabled();
 			}
 		} else {
-
 			TakeASeat.LOGGER.warn("[TakeASeat] SIT failed: triggerAnimation returned false for '{}' — animation missing from the resource pack?", id);
 		}
 	}
