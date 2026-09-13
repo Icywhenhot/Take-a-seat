@@ -16,13 +16,6 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
-/**
- * Client-side networking: applies the sit/stand animations broadcast by the server onto <em>other</em>
- * players' avatars. The local player is animated directly (see {@link TakeASeatClient}), so we skip ourselves.
- *
- * <p>{@link #REMOTE_SITS} remembers who is currently sitting so that a player whose entity loads in late
- * (e.g. you just joined and they were already seated) still gets their pose applied — see {@link #reconcile}.
- */
 public final class TakeASeatClientNetworking {
 	private TakeASeatClientNetworking() {}
 
@@ -32,7 +25,7 @@ public final class TakeASeatClientNetworking {
 		ClientPlayNetworking.registerGlobalReceiver(StartSitPayload.TYPE, (payload, context) ->
 				context.client().execute(() -> {
 					Player self = context.client().player;
-					if (self != null && self.getUUID().equals(payload.playerUuid())) return; // we animate ourselves
+					if (self != null && self.getUUID().equals(payload.playerUuid())) return;
 					REMOTE_SITS.put(payload.playerUuid(), payload.animId());
 					PlayerAnimationController controller = controllerFor(context.client(), payload.playerUuid());
 					if (controller != null) controller.triggerAnimation(payload.animId());
@@ -48,7 +41,6 @@ public final class TakeASeatClientNetworking {
 		ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> REMOTE_SITS.clear());
 	}
 
-	/** Re-apply sits to players whose entity has since loaded (e.g. you just joined). Cheap no-op when idle. */
 	public static void reconcile(Minecraft client) {
 		if (REMOTE_SITS.isEmpty() || client.level == null) return;
 		for (Player p : client.level.players()) {

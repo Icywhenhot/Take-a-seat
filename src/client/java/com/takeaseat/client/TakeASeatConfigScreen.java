@@ -7,10 +7,6 @@ import me.shedaniel.clothconfig2.api.ConfigEntryBuilder;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 
-/**
- * Builds the TakeASeat settings screen with Cloth Config. Values are written straight back into
- * {@link TakeASeatConfig} and persisted via {@code saveConfig()} when the screen's Save is pressed.
- */
 public final class TakeASeatConfigScreen {
 	private TakeASeatConfigScreen() {}
 
