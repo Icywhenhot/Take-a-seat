@@ -112,6 +112,13 @@ public class TakeASeatClient implements ClientModInitializer {
 								})
 								.executes(ctx -> runPoseCommand(ctx.getSource(), StringArgumentType.getString(ctx, "pose"), 1))
 								.then(ClientCommandManager.argument("variant", IntegerArgumentType.integer(1))
+										.suggests((c, b) -> {
+											Identifier[] set = poseSet(StringArgumentType.getString(c, "pose"));
+											if (set != null) {
+												for (int i = 1; i <= set.length; i++) b.suggest(i);
+											}
+											return b.buildFuture();
+										})
 										.executes(ctx -> runPoseCommand(ctx.getSource(),
 												StringArgumentType.getString(ctx, "pose"),
 												IntegerArgumentType.getInteger(ctx, "variant")))))));
@@ -291,7 +298,7 @@ public class TakeASeatClient implements ClientModInitializer {
 	private int runPoseCommand(net.fabricmc.fabric.api.client.command.v2.FabricClientCommandSource source, String pose, int variant) {
 		if (!commandSit(pose, variant)) {
 			source.sendFeedback(Component.literal(
-					"Take a Seat: unknown pose '" + pose + "'. Try one of: ground, chair, fence, bed, sword, axe, shovel, fishing, campfire, furnace"));
+					"Take a Seat: unknown pose '" + pose + "'. Try one of: " + String.join(", ", POSE_NAMES)));
 		}
 		return 1;
 	}
