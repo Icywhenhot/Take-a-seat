@@ -3,6 +3,11 @@ package com.takeaseat.client.mixin;
 import com.takeaseat.TakeASeatConfig;
 import com.takeaseat.client.TakeASeatClient;
 import net.minecraft.client.Camera;
+import net.minecraft.client.Minecraft;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.level.ClipContext;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -37,7 +42,33 @@ public abstract class CameraMixin {
 
 		if (this.takeaseat$smoothOffset > 1.0e-4) {
 			Vec3 p = this.position();
-			this.setPosition(new Vec3(p.x, p.y - this.takeaseat$smoothOffset, p.z));
+			double drop = this.isDetached()
+					? takeaseat$clampDrop(p, this.takeaseat$smoothOffset)
+					: this.takeaseat$smoothOffset;
+			if (drop > 1.0e-4) {
+				this.setPosition(new Vec3(p.x, p.y - drop, p.z));
+			}
 		}
+	}
+
+	@Unique
+	private static double takeaseat$clampDrop(Vec3 from, double drop) {
+		Minecraft mc = Minecraft.getInstance();
+		Level level = mc.level;
+		Entity cam = mc.getCameraEntity();
+		if (level == null) return drop;
+
+		for (int i = 0; i < 8; i++) {
+			Vec3 corner = from.add(
+					((i & 1) * 2 - 1) * 0.1,
+					((i >> 1 & 1) * 2 - 1) * 0.1,
+					((i >> 2 & 1) * 2 - 1) * 0.1);
+			HitResult hit = level.clip(new ClipContext(corner, corner.subtract(0.0, drop, 0.0),
+					ClipContext.Block.VISUAL, ClipContext.Fluid.NONE, cam));
+			if (hit.getType() != HitResult.Type.MISS) {
+				drop = Math.min(drop, hit.getLocation().distanceTo(from) - 0.1);
+			}
+		}
+		return drop;
 	}
 }
