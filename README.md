@@ -19,7 +19,7 @@ NeoForge.
 |---|---|
 | Minecraft | 1.21.11 |
 | NeoForge | 21.11.42+ |
-| Player Animation Library | bundled in this port |
+| Player Animation Library | 1.1.7+mc.1.21.11 or newer (install separately) |
 
 ---
 
