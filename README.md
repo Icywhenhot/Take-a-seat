@@ -19,7 +19,7 @@ NeoForge.
 |---|---|
 | Minecraft | 26.2 |
 | NeoForge | 26.2.0.7-beta+ |
-| Player Animation Library | bundled in this port |
+| Player Animation Library | 1.2.4+mc.26.2 or newer (install separately) |
 
 ---
 
