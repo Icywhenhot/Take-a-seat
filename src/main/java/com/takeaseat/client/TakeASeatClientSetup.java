@@ -1,23 +1,23 @@
-package com.seatify.client;
+package com.takeaseat.client;
 
-import com.seatify.Seatify;
+import com.takeaseat.TakeASeat;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.RegisterKeyMappingsEvent;
 import net.neoforged.neoforge.client.network.event.RegisterClientPayloadHandlersEvent;
 
-@EventBusSubscriber(modid = Seatify.MOD_ID, value = Dist.CLIENT)
-public final class SeatifyClientSetup {
-	private SeatifyClientSetup() {}
+@EventBusSubscriber(modid = TakeASeat.MOD_ID, value = Dist.CLIENT)
+public final class TakeASeatClientSetup {
+	private TakeASeatClientSetup() {}
 
 	@SubscribeEvent
 	public static void registerKeyMappings(RegisterKeyMappingsEvent event) {
-		SeatifyClient.registerKeyMappings(event);
+		TakeASeatClient.registerKeyMappings(event);
 	}
 
 	@SubscribeEvent
 	public static void registerClientPayloadHandlers(RegisterClientPayloadHandlersEvent event) {
-		SeatifyClientNetworking.registerClientReceivers(event);
+		TakeASeatClientNetworking.registerClientReceivers(event);
 	}
 }

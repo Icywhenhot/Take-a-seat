@@ -19,7 +19,7 @@ NeoForge.
 |---|---|
 | Minecraft | 26.1.2 |
 | NeoForge | 26.1.2.76+ |
-| Player Animation Library | bundled in this port |
+| Player Animation Library | 1.2.4+mc.26.1 or newer (install separately) |
 
 ---
 
@@ -48,7 +48,7 @@ When you press the key, Take a Seat checks these in order and uses the **first**
 | 9 | **Standing on a bed** | `bedlyingdown` 1–3 | Lie down, 3 variants |
 | 10 | **Standing on a bottom slab** | `chairsitting` 1–4 | Treated as a chair |
 | 11 | **Standing on a carpet** | ground poses | Treated as floor |
-| 12 | **Standing on a `#seatify:sittable` block** | `chairsitting` 1–4 | Datapack-defined chairs (incl. modded) |
+| 12 | **Standing on a `#takeaseat:sittable` block** | `chairsitting` 1–4 | Datapack-defined chairs (incl. modded) |
 | 13 | **Anywhere else (ground)** | `kneesitting`, `buttsit`, `buttsit2`, `kneeleaning` | Default, 4 variants |
 
 Because the list is checked top-down, **what you're looking at or holding wins over what you're standing
@@ -97,7 +97,7 @@ to you automatically (no need for them to re-sit).
 
 ## For datapack / modpack makers
 
-Make any block sittable (it'll use the chair pose) by adding it to the **`#seatify:sittable`** block tag —
+Make any block sittable (it'll use the chair pose) by adding it to the **`#takeaseat:sittable`** block tag —
 create `data/<your_pack>/tags/block/sittable.json`:
 
 ```json

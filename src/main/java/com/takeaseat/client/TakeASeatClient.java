@@ -1,8 +1,8 @@
-package com.seatify.client;
+package com.takeaseat.client;
 
 import com.mojang.blaze3d.platform.InputConstants;
-import com.seatify.Seatify;
-import com.seatify.SeatifyConfig;
+import com.takeaseat.TakeASeat;
+import com.takeaseat.TakeASeatConfig;
 import com.zigythebird.playeranim.animation.PlayerAnimationController;
 import com.zigythebird.playeranim.api.PlayerAnimationAccess;
 import com.zigythebird.playeranim.api.PlayerAnimationFactory;
@@ -47,11 +47,9 @@ import org.lwjgl.glfw.GLFW;
 
 import java.util.Locale;
 
-public final class SeatifyClient {
-	/** PAL animation-layer id under which the sitting controller is registered on every player. */
-	public static final Identifier SIT_LAYER = Seatify.id("sit");
-	/** Datapack/user-extensible tag of blocks that act as chairs. */
-	public static final TagKey<Block> SITTABLE = TagKey.create(Registries.BLOCK, Seatify.id("sittable"));
+public final class TakeASeatClient {
+	public static final Identifier SIT_LAYER = TakeASeat.id("sit");
+	public static final TagKey<Block> SITTABLE = TagKey.create(Registries.BLOCK, TakeASeat.id("sittable"));
 
 	private static KeyMapping sitKey;
 	private static boolean isSitting = false;
@@ -59,7 +57,6 @@ public final class SeatifyClient {
 	private static int animationState = 0;
 	private static long lastActivityMs = System.currentTimeMillis();
 
-	// Animation sets (cycled through on repeated presses). All names live inside buttsit.json.
 	private static final Identifier[] GROUND = ids("kneesitting", "buttsit", "buttsit2", "kneeleaning");
 	private static final Identifier[] STAIRS = ids("chairsitting", "chairsitting2", "chairsitting3", "chairsitting4");
 	private static final Identifier[] FENCES = ids("fencesitting", "fencesitting2");
@@ -71,28 +68,26 @@ public final class SeatifyClient {
 	private static final Identifier[] CAMPFIRE = ids("campfiresit");
 	private static final Identifier[] FURNACE = ids("furnacesit");
 
-	private SeatifyClient() {}
+	private TakeASeatClient() {}
 
 	private static Identifier[] ids(String... names) {
 		Identifier[] out = new Identifier[names.length];
-		for (int i = 0; i < names.length; i++) out[i] = Seatify.id(names[i]);
+		for (int i = 0; i < names.length; i++) out[i] = TakeASeat.id(names[i]);
 		return out;
 	}
 
 	public static void registerKeyMappings(RegisterKeyMappingsEvent event) {
-		KeyMapping.Category category = KeyMapping.Category.register(Seatify.id("sit"));
-		sitKey = new KeyMapping("key.seatify.sit", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_X, category);
+		KeyMapping.Category category = KeyMapping.Category.register(TakeASeat.id("sit"));
+		sitKey = new KeyMapping("key.takeaseat.sit", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_X, category);
 		event.register(sitKey);
 
-		// Attach a sitting animation controller to every client player (local + remote).
 		PlayerAnimationFactory.ANIMATION_DATA_FACTORY.registerFactory(SIT_LAYER, 1000,
 				player -> new PlayerAnimationController(player,
 						(controller, state, animationSetter) -> PlayState.STOP));
 	}
 
-	// Right-click an empty hand on a stair block to sit on it.
 	public static void onRightClickBlock(PlayerInteractEvent.RightClickBlock event) {
-		if (!SeatifyConfig.getConfig().enableClickToSit) {
+		if (!TakeASeatConfig.getConfig().enableClickToSit) {
 			return;
 		}
 		InteractionResult result = onRightClickBlock(event.getEntity(), event.getLevel(), event.getHand(), event.getHitVec());
@@ -146,7 +141,7 @@ public final class SeatifyClient {
 		Minecraft client = Minecraft.getInstance();
 		LocalPlayer player = client.player;
 		if (player == null || !client.isWindowActive()) {
-			SeatifyClientNetworking.reconcile(client);
+			TakeASeatClientNetworking.reconcile(client);
 			return;
 		}
 
@@ -161,14 +156,12 @@ public final class SeatifyClient {
 			}
 		}
 
-		// Moving cancels the sit (this is the only path that restores the camera).
 		if (isSitting && moving) {
 			standUp(controllerFor(player), player);
 			animationState = 0;
 		}
 
-		// Optional AFK auto-sit (off by default; was dead code in the original mod).
-		SeatifyConfig cfg = SeatifyConfig.getConfig();
+		TakeASeatConfig cfg = TakeASeatConfig.getConfig();
 		if (cfg.enableAfkSit && !isSitting && client.screen == null && canSit(player)) {
 			long delayMs = cfg.afkSitDelaySeconds * 1000L;
 			if (System.currentTimeMillis() - lastActivityMs >= delayMs) {
@@ -179,17 +172,13 @@ public final class SeatifyClient {
 			}
 		}
 
-		// Keep remote players' poses in sync (covers late-loading entities after a join).
-		SeatifyClientNetworking.reconcile(client);
+		TakeASeatClientNetworking.reconcile(client);
 	}
 
 	private static void handleSitPress(LocalPlayer player, PlayerAnimationController controller) {
 		if (!canSit(player)) return;
-		// Note: we do NOT stop the current animation here. triggerAnimation() replaces it in place,
-		// and calling stop would restore the camera mid-cycle (resetting a manual F5 change).
 		Level level = player.level();
 
-		// 1) Looking at a campfire or furnace?
 		Vec3 eye = player.getEyePosition();
 		Vec3 reach = player.getLookAngle().scale(2.0);
 		Vec3 lookEnd = eye.add(reach);
@@ -206,7 +195,6 @@ public final class SeatifyClient {
 			}
 		}
 
-		// 2) Holding a tool/weapon/fishing rod?
 		ItemStack held = player.getMainHandItem();
 		if (held.is(ItemTags.SWORDS)) {
 			playAnimation(controller, player, SWORD);
@@ -225,7 +213,6 @@ public final class SeatifyClient {
 			return;
 		}
 
-		// 3) What am I standing on?
 		Vec3 start = player.position();
 		Vec3 down = new Vec3(player.getX(), player.getY() - 1.5, player.getZ());
 		BlockHitResult ground = level.clip(new ClipContext(start, down, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, player));
@@ -258,11 +245,8 @@ public final class SeatifyClient {
 			}
 		}
 
-		// 4) Default ground sit.
 		playAnimation(controller, player, GROUND);
 	}
-
-	// ----- animation plumbing -----
 
 	private static void playAnimation(PlayerAnimationController controller, LocalPlayer player, Identifier[] animations) {
 		if (controller == null || animations == null || animations.length == 0) return;
@@ -272,10 +256,9 @@ public final class SeatifyClient {
 		if (controller.triggerAnimation(id)) {
 			boolean wasSitting = isSitting;
 			isSitting = true;
-			SeatifyClientNetworking.sendStartSit(player.getUUID(), id);
+			TakeASeatClientNetworking.sendStartSit(player.getUUID(), id);
 			animationState = (animationState + 1) % animations.length;
 			lastActivityMs = System.currentTimeMillis();
-			// Only switch perspective on the initial sit, so a manual F5 while seated is preserved.
 			if (!wasSitting) {
 				setThirdPersonIfEnabled();
 			}
@@ -286,15 +269,15 @@ public final class SeatifyClient {
 		if (!isSitting || controller == null) return;
 		controller.stop();
 		isSitting = false;
-		SeatifyClientNetworking.sendStopSit(player.getUUID());
-		if (SeatifyConfig.getConfig().enableThirdPersonOnSit && previousPerspective != null) {
+		TakeASeatClientNetworking.sendStopSit(player.getUUID());
+		if (TakeASeatConfig.getConfig().enableThirdPersonOnSit && previousPerspective != null) {
 			Minecraft.getInstance().options.setCameraType(previousPerspective);
 			previousPerspective = null;
 		}
 	}
 
 	private static void setThirdPersonIfEnabled() {
-		if (!SeatifyConfig.getConfig().enableThirdPersonOnSit) return;
+		if (!TakeASeatConfig.getConfig().enableThirdPersonOnSit) return;
 		Minecraft client = Minecraft.getInstance();
 		CameraType current = client.options.getCameraType();
 		if (current == CameraType.FIRST_PERSON) {
@@ -319,7 +302,6 @@ public final class SeatifyClient {
 		return layer instanceof PlayerAnimationController controller ? controller : null;
 	}
 
-	/** Whether the local player is currently in a Seatify sitting animation (read by the camera mixin). */
 	public static boolean isSitting() {
 		return isSitting;
 	}

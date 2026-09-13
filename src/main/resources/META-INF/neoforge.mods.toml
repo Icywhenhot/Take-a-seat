@@ -10,7 +10,7 @@ version="${mod_version}"
 displayName="${mod_name}"
 description='''Sit, lounge, and relax. Press a key and Take a Seat plays a context-aware sitting animation on your player - it figures out what you're near or holding and picks a fitting pose, then keeps your model in frame with a smooth camera. Other players see you sitting too when they also have the mod.'''
 authors="Take a Seat"
-logoFile="assets/seatify/icon.png"
+logoFile="assets/takeaseat/icon.png"
 
 [[dependencies.${mod_id}]]
 modId="neoforge"
@@ -26,5 +26,12 @@ versionRange="[${minecraft_version},${minecraft_version}]"
 ordering="NONE"
 side="BOTH"
 
+[[dependencies.${mod_id}]]
+modId="player_animation_library"
+type="required"
+versionRange="[${pal_version},)"
+ordering="NONE"
+side="BOTH"
+
 [[mixins]]
-config="seatify.client.mixins.json"
+config="takeaseat.client.mixins.json"
