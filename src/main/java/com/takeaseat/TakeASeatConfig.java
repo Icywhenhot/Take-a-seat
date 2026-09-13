@@ -10,31 +10,17 @@ import java.io.Writer;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
-/**
- * Simple JSON config, stored at {@code config/TakeASeatConfig.json}.
- * Mirrors the original mod's options.
- */
 public class TakeASeatConfig {
 	private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
 	private static final Path CONFIG_PATH = FMLPaths.CONFIGDIR.get().resolve("TakeASeatConfig.json");
 	private static final Path LEGACY_CONFIG_PATH = FMLPaths.CONFIGDIR.get().resolve("SeatifyConfig.json");
 
-	/** Right-click an empty hand on stairs to sit down on them. */
 	public boolean enableClickToSit = true;
-	/** Automatically switch to third person while sitting (restored when you stand). */
 	public boolean enableThirdPersonOnSit = true;
-	/** Smoothly lower the camera while sitting so the focus settles on the player model. */
 	public boolean enableSitCameraFocus = true;
-	/** How far (in blocks) to lower the camera while sitting. */
 	public double cameraFocusOffset = 0.55;
-	/** If true, only apply the camera-lowering while in first person (skip it in third person). */
 	public boolean onlyLowerCameraInFirstPerson = false;
-	/**
-	 * Auto-sit after being idle. NOTE: in the original mod this feature was dead code and never fired.
-	 * It is implemented here but defaults to {@code false} to preserve the original behaviour; flip it on if you want it.
-	 */
 	public boolean enableAfkSit = false;
-	/** Seconds of no movement input before the AFK auto-sit kicks in. */
 	public int afkSitDelaySeconds = 60;
 
 	private static TakeASeatConfig instance;

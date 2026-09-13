@@ -21,7 +21,6 @@ repositories {
 		url = "https://libraries.minecraft.net/"
 	}
 	maven {
-		// Player Animation Library (com.zigythebird.playeranim)
 		name = "RedlanceMinecraft"
 		url = "https://repo.redlance.org/public"
 	}
@@ -51,18 +50,6 @@ neoForge {
 dependencies {
 	implementation "net.neoforged:neoforge:${project.neo_version}"
 
-	// Player Animation Library backend (NeoForge build for MC 26.1).
-	// This is NOT jar-in-jar'd. PAL's NeoForge distribution jar bundles PlayerAnimationLibCore's
-	// classes directly into its own module (it isn't packaged as a nested jar-in-jar artifact), so
-	// jarJar-ing our own copy of PlayerAnimationLibCore alongside a standalone PAL install causes a
-	// JPMS split-package ResolutionException at startup: two separate modules both export
-	// com.zigythebird.playeranimcore.math to whichever module reads it, and NeoForge's jar-in-jar
-	// version negotiation has no way to recognize the standalone jar as satisfying the embedded
-	// one. Requiring PAL as a normal mod dependency (see neoforge.mods.toml) avoids that entirely.
-	//
-	// On the compile/runtime classpath we only need the Neo artifact; it transitively pulls
-	// Core, services and mochafloats. We exclude the libraries Minecraft already ships (and pins
-	// via `strictly` version constraints) so they don't conflict at compile time.
 	implementation("com.zigythebird.playeranim:PlayerAnimationLibNeo:${project.pal_version}") {
 		exclude group: "com.google.code.gson"
 		exclude group: "org.slf4j"
@@ -97,7 +84,6 @@ tasks.withType(JavaCompile).configureEach {
 java {
 	withSourcesJar()
 
-	// Mojang ships Java 25 to end users in 26.1.2, so mods must target Java 25.
 	toolchain.languageVersion = JavaLanguageVersion.of(25)
 }
 
