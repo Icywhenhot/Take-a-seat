@@ -17,13 +17,6 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
-/**
- * Client-side networking: applies the sit/stand animations broadcast by the server onto <em>other</em>
- * players' avatars. The local player is animated directly (see {@link TakeASeatClient}), so we skip ourselves.
- *
- * <p>{@link #REMOTE_SITS} remembers who is currently sitting so that a player whose entity loads in late
- * (e.g. you just joined and they were already seated) still gets their pose applied — see {@link #reconcile}.
- */
 public final class TakeASeatClientNetworking {
 	private TakeASeatClientNetworking() {}
 
@@ -33,7 +26,7 @@ public final class TakeASeatClientNetworking {
 		ClientPlayNetworking.registerGlobalReceiver(StartSitPayload.TYPE, (payload, context) ->
 				context.client().execute(() -> {
 					Player self = context.client().player;
-					if (self != null && self.getUUID().equals(payload.playerUuid())) return; // we animate ourselves
+					if (self != null && self.getUUID().equals(payload.playerUuid())) return;
 					REMOTE_SITS.put(payload.playerUuid(), payload.animId());
 					PlayerAnimationController controller = controllerFor(context.client(), payload.playerUuid());
 					boolean applied = controller != null && controller.triggerAnimation(payload.animId());
@@ -44,11 +37,6 @@ public final class TakeASeatClientNetworking {
 		ClientPlayNetworking.registerGlobalReceiver(StopSitPayload.TYPE, (payload, context) ->
 				context.client().execute(() -> {
 					Player self = context.client().player;
-					// Skip our own echo, exactly like the StartSit receiver does. The local player's stop is
-					// driven directly by TakeASeatClient#standUp; letting a delayed self-echo also call stop()
-					// here can land on top of a fresh re-sit and, if it hits before the new animation commits,
-					// resurrect it into a stuck pose. The server broadcasts to everyone including the sender,
-					// so without this guard we would always double-handle ourselves.
 					if (self != null && self.getUUID().equals(payload.playerUuid())) {
 						REMOTE_SITS.remove(payload.playerUuid());
 						TakeASeat.LOGGER.debug("[TakeASeat][net] recv StopSit for self — ignored (local stand handled by standUp)");
@@ -57,10 +45,6 @@ public final class TakeASeatClientNetworking {
 					REMOTE_SITS.remove(payload.playerUuid());
 					PlayerAnimationController controller = controllerFor(context.client(), payload.playerUuid());
 					if (controller != null) {
-						// stopTriggeredAnimation() before stop() so the stop is durable even when a
-						// StartSit+StopSit pair arrives within a single tick (same resurrection race as the
-						// local player — see TakeASeatClient#standUp). Without it a remote player can get stuck
-						// in the sit pose.
 						controller.stopTriggeredAnimation();
 						controller.stop();
 					}
@@ -71,7 +55,6 @@ public final class TakeASeatClientNetworking {
 		ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> REMOTE_SITS.clear());
 	}
 
-	/** Re-apply sits to players whose entity has since loaded (e.g. you just joined). Cheap no-op when idle. */
 	public static void reconcile(Minecraft client) {
 		if (REMOTE_SITS.isEmpty() || client.level == null) return;
 		for (Player p : client.level.players()) {
@@ -87,7 +70,6 @@ public final class TakeASeatClientNetworking {
 		}
 	}
 
-	/** First 8 chars of a UUID — enough to correlate log lines without dumping the whole thing. */
 	private static String shortId(UUID uuid) {
 		return uuid.toString().substring(0, 8);
 	}

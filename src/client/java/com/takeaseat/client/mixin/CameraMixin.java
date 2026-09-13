@@ -13,11 +13,6 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-/**
- * Lowers the camera while the local player is sitting so the focus settles on the seated body.
- * Applied after {@code Camera.setup} has positioned the camera for the frame; the offset is eased
- * in/out so it reads as a smooth camera move rather than a snap.
- */
 @Mixin(Camera.class)
 public abstract class CameraMixin {
 	@Shadow public abstract Vec3 position();
@@ -32,7 +27,6 @@ public abstract class CameraMixin {
 	private void takeaseat$focusOnSittingPlayer(Level level, Entity entity, boolean detached, boolean thirdPerson, float partialTick, CallbackInfo ci) {
 		TakeASeatConfig cfg = TakeASeatConfig.getConfig();
 		boolean sitting = cfg.enableSitCameraFocus && TakeASeatClient.isSitting();
-		// If configured, only apply the lower in first person (isDetached() == third person).
 		if (sitting && cfg.onlyLowerCameraInFirstPerson && this.isDetached()) {
 			sitting = false;
 		}
