@@ -48,9 +48,7 @@ import org.lwjgl.glfw.GLFW;
 import java.util.Locale;
 
 public final class TakeASeatClient {
-	/** PAL animation-layer id under which the sitting controller is registered on every player. */
 	public static final ResourceLocation SIT_LAYER = TakeASeat.id("sit");
-	/** Datapack/user-extensible tag of blocks that act as chairs. */
 	public static final TagKey<Block> SITTABLE = TagKey.create(Registries.BLOCK, TakeASeat.id("sittable"));
 
 	private static KeyMapping sitKey;
@@ -59,7 +57,6 @@ public final class TakeASeatClient {
 	private static int animationState = 0;
 	private static long lastActivityMs = System.currentTimeMillis();
 
-	// Animation sets (cycled through on repeated presses). All names live inside buttsit.json.
 	private static final ResourceLocation[] GROUND = ids("kneesitting", "buttsit", "buttsit2", "kneeleaning");
 	private static final ResourceLocation[] STAIRS = ids("chairsitting", "chairsitting2", "chairsitting3", "chairsitting4");
 	private static final ResourceLocation[] FENCES = ids("fencesitting", "fencesitting2");
@@ -84,13 +81,11 @@ public final class TakeASeatClient {
 		sitKey = new KeyMapping("key.takeaseat.sit", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_X, category);
 		event.register(sitKey);
 
-		// Attach a sitting animation controller to every client player (local + remote).
 		PlayerAnimationFactory.ANIMATION_DATA_FACTORY.registerFactory(SIT_LAYER, 1000,
 				player -> new PlayerAnimationController(player,
 						(controller, state, animationSetter) -> PlayState.STOP));
 	}
 
-	// Right-click an empty hand on a stair block to sit on it.
 	public static void onRightClickBlock(PlayerInteractEvent.RightClickBlock event) {
 		if (!TakeASeatConfig.getConfig().enableClickToSit) {
 			return;
@@ -161,13 +156,11 @@ public final class TakeASeatClient {
 			}
 		}
 
-		// Moving cancels the sit (this is the only path that restores the camera).
 		if (isSitting && moving) {
 			standUp(controllerFor(player), player);
 			animationState = 0;
 		}
 
-		// Optional AFK auto-sit (off by default; was dead code in the original mod).
 		TakeASeatConfig cfg = TakeASeatConfig.getConfig();
 		if (cfg.enableAfkSit && !isSitting && client.screen == null && canSit(player)) {
 			long delayMs = cfg.afkSitDelaySeconds * 1000L;
@@ -179,17 +172,13 @@ public final class TakeASeatClient {
 			}
 		}
 
-		// Keep remote players' poses in sync (covers late-loading entities after a join).
 		TakeASeatClientNetworking.reconcile(client);
 	}
 
 	private static void handleSitPress(LocalPlayer player, PlayerAnimationController controller) {
 		if (!canSit(player)) return;
-		// Note: we do NOT stop the current animation here. triggerAnimation() replaces it in place,
-		// and calling stop would restore the camera mid-cycle (resetting a manual F5 change).
 		Level level = player.level();
 
-		// 1) Looking at a campfire or furnace?
 		Vec3 eye = player.getEyePosition();
 		Vec3 reach = player.getLookAngle().scale(2.0);
 		Vec3 lookEnd = eye.add(reach);
@@ -206,7 +195,6 @@ public final class TakeASeatClient {
 			}
 		}
 
-		// 2) Holding a tool/weapon/fishing rod?
 		ItemStack held = player.getMainHandItem();
 		if (held.is(ItemTags.SWORDS)) {
 			playAnimation(controller, player, SWORD);
@@ -225,7 +213,6 @@ public final class TakeASeatClient {
 			return;
 		}
 
-		// 3) What am I standing on?
 		Vec3 start = player.position();
 		Vec3 down = new Vec3(player.getX(), player.getY() - 1.5, player.getZ());
 		BlockHitResult ground = level.clip(new ClipContext(start, down, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, player));
@@ -258,11 +245,8 @@ public final class TakeASeatClient {
 			}
 		}
 
-		// 4) Default ground sit.
 		playAnimation(controller, player, GROUND);
 	}
-
-	// ----- animation plumbing -----
 
 	private static void playAnimation(PlayerAnimationController controller, LocalPlayer player, ResourceLocation[] animations) {
 		if (controller == null || animations == null || animations.length == 0) return;
@@ -275,7 +259,6 @@ public final class TakeASeatClient {
 			TakeASeatClientNetworking.sendStartSit(player.getUUID(), id);
 			animationState = (animationState + 1) % animations.length;
 			lastActivityMs = System.currentTimeMillis();
-			// Only switch perspective on the initial sit, so a manual F5 while seated is preserved.
 			if (!wasSitting) {
 				setThirdPersonIfEnabled();
 			}
@@ -319,7 +302,6 @@ public final class TakeASeatClient {
 		return layer instanceof PlayerAnimationController controller ? controller : null;
 	}
 
-	/** Whether the local player is currently in a Take a Seat sitting animation (read by the camera mixin). */
 	public static boolean isSitting() {
 		return isSitting;
 	}
