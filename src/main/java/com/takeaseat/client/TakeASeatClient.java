@@ -1,6 +1,8 @@
 package com.takeaseat.client;
 
 import com.mojang.blaze3d.platform.InputConstants;
+import com.mojang.brigadier.arguments.IntegerArgumentType;
+import com.mojang.brigadier.arguments.StringArgumentType;
 import com.takeaseat.TakeASeat;
 import com.takeaseat.TakeASeatConfig;
 import com.zigythebird.playeranim.animation.PlayerAnimationController;
@@ -12,6 +14,8 @@ import net.minecraft.client.CameraType;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.commands.CommandSourceStack;
+import net.minecraft.commands.Commands;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.registries.Registries;
@@ -41,6 +45,7 @@ import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
+import net.neoforged.neoforge.client.event.RegisterClientCommandsEvent;
 import net.neoforged.neoforge.client.event.RegisterKeyMappingsEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
 import org.lwjgl.glfw.GLFW;
@@ -68,6 +73,9 @@ public final class TakeASeatClient {
 	private static final ResourceLocation[] CAMPFIRE = ids("campfiresit");
 	private static final ResourceLocation[] FURNACE = ids("furnacesit");
 
+	private static final String[] POSE_NAMES =
+			{"ground", "chair", "fence", "bed", "sword", "axe", "shovel", "fishing", "campfire", "furnace"};
+
 	private TakeASeatClient() {}
 
 	private static ResourceLocation[] ids(String... names) {
@@ -84,6 +92,76 @@ public final class TakeASeatClient {
 		PlayerAnimationFactory.ANIMATION_DATA_FACTORY.registerFactory(SIT_LAYER, 1000,
 				player -> new PlayerAnimationController(player,
 						(controller, state, animationSetter) -> PlayState.STOP));
+	}
+
+	public static void registerClientCommands(RegisterClientCommandsEvent event) {
+		event.getDispatcher().register(Commands.literal("sit")
+				.executes(ctx -> {
+					contextSit();
+					return 1;
+				})
+				.then(Commands.argument("pose", StringArgumentType.word())
+						.suggests((c, b) -> {
+							for (String p : POSE_NAMES) b.suggest(p);
+							return b.buildFuture();
+						})
+						.executes(ctx -> runPose(ctx.getSource(), StringArgumentType.getString(ctx, "pose"), 1))
+						.then(Commands.argument("variant", IntegerArgumentType.integer(1))
+								.suggests((c, b) -> {
+									ResourceLocation[] set = poseSet(StringArgumentType.getString(c, "pose"));
+									if (set != null) {
+										for (int i = 1; i <= set.length; i++) b.suggest(i);
+									}
+									return b.buildFuture();
+								})
+								.executes(ctx -> runPose(ctx.getSource(),
+										StringArgumentType.getString(ctx, "pose"),
+										IntegerArgumentType.getInteger(ctx, "variant"))))));
+	}
+
+	private static int runPose(CommandSourceStack source, String pose, int variant) {
+		if (!commandSit(pose, variant)) {
+			source.sendSuccess(() -> Component.literal(
+					"Take a Seat: unknown pose '" + pose + "'. Try one of: " + String.join(", ", POSE_NAMES)), false);
+		}
+		return 1;
+	}
+
+	private static boolean commandSit(String pose, int variant) {
+		ResourceLocation[] set = poseSet(pose);
+		if (set == null) return false;
+		LocalPlayer player = Minecraft.getInstance().player;
+		if (player == null || !canSit(player)) return true;
+		PlayerAnimationController controller = controllerFor(player);
+		if (controller == null) return true;
+		animationState = Math.floorMod(variant - 1, set.length);
+		playAnimation(controller, player, set);
+		return true;
+	}
+
+	private static void contextSit() {
+		LocalPlayer player = Minecraft.getInstance().player;
+		if (player == null) return;
+		PlayerAnimationController controller = controllerFor(player);
+		if (controller != null) {
+			handleSitPress(player, controller);
+		}
+	}
+
+	private static ResourceLocation[] poseSet(String name) {
+		return switch (name.toLowerCase(Locale.ROOT)) {
+			case "ground", "floor" -> GROUND;
+			case "chair", "stairs", "stair" -> STAIRS;
+			case "fence" -> FENCES;
+			case "bed", "lie", "liedown" -> BEDS;
+			case "sword" -> SWORD;
+			case "axe" -> AXE;
+			case "shovel" -> SHOVEL;
+			case "fishing", "rod" -> FISHING;
+			case "campfire", "fire" -> CAMPFIRE;
+			case "furnace" -> FURNACE;
+			default -> null;
+		};
 	}
 
 	public static void onRightClickBlock(PlayerInteractEvent.RightClickBlock event) {
