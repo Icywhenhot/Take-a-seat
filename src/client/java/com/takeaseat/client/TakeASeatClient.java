@@ -48,7 +48,6 @@ import net.minecraft.world.level.block.state.properties.SlabType;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
-import org.lwjgl.glfw.GLFW;
 
 import java.util.Locale;
 
@@ -89,7 +88,7 @@ public class TakeASeatClient implements ClientModInitializer {
 	@Override
 	public void onInitializeClient() {
 		KeyMapping.Category category = KeyMapping.Category.register(TakeASeat.id("sit"));
-		sitKey = new KeyMapping("key.takeaseat.sit", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_X, category);
+		sitKey = new KeyMapping("key.takeaseat.sit", InputConstants.Type.KEYBOARD, InputConstants.KEY_X, category);
 		KeyMappingHelper.registerKeyMapping(sitKey);
 
 		PlayerAnimationFactory.ANIMATION_DATA_FACTORY.registerFactory(SIT_LAYER, 1000,
