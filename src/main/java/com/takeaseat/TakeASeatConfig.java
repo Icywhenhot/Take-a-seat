@@ -17,11 +17,14 @@ public class TakeASeatConfig {
 
 	public boolean enableClickToSit = true;
 	public boolean enableThirdPersonOnSit = true;
+	public SitView sitView = SitView.BACK;
 	public boolean enableSitCameraFocus = true;
 	public double cameraFocusOffset = 0.55;
 	public boolean onlyLowerCameraInFirstPerson = false;
 	public boolean enableAfkSit = false;
 	public int afkSitDelaySeconds = 60;
+
+	public enum SitView { BACK, FRONT }
 
 	private static TakeASeatConfig instance;
 
@@ -41,6 +44,7 @@ public class TakeASeatConfig {
 				if (loaded != null) {
 					this.enableClickToSit = loaded.enableClickToSit;
 					this.enableThirdPersonOnSit = loaded.enableThirdPersonOnSit;
+					if (loaded.sitView != null) this.sitView = loaded.sitView;
 					this.enableSitCameraFocus = loaded.enableSitCameraFocus;
 					this.cameraFocusOffset = loaded.cameraFocusOffset;
 					this.onlyLowerCameraInFirstPerson = loaded.onlyLowerCameraInFirstPerson;
