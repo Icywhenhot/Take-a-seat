@@ -355,12 +355,15 @@ public final class TakeASeatClient {
 	}
 
 	private static void setThirdPersonIfEnabled() {
-		if (!TakeASeatConfig.getConfig().enableThirdPersonOnSit) return;
+		TakeASeatConfig cfg = TakeASeatConfig.getConfig();
+		if (!cfg.enableThirdPersonOnSit) return;
 		Minecraft client = Minecraft.getInstance();
 		CameraType current = client.options.getCameraType();
 		if (current == CameraType.FIRST_PERSON) {
 			previousPerspective = current;
-			client.options.setCameraType(CameraType.THIRD_PERSON_BACK);
+			client.options.setCameraType(cfg.sitView == TakeASeatConfig.SitView.FRONT
+					? CameraType.THIRD_PERSON_FRONT
+					: CameraType.THIRD_PERSON_BACK);
 		} else {
 			previousPerspective = null;
 		}
@@ -369,10 +372,14 @@ public final class TakeASeatClient {
 	private static boolean canSit(LocalPlayer player) {
 		return player.onGround()
 				&& !player.isPassenger()
-				&& !player.isInWater()
+				&& (!player.isInWater() || shallowWater(player))
 				&& !player.isSwimming()
 				&& !player.isFallFlying()
 				&& !player.isSleeping();
+	}
+
+	private static boolean shallowWater(LocalPlayer player) {
+		return player.level().getFluidState(player.blockPosition().above()).isEmpty();
 	}
 
 	private static PlayerAnimationController controllerFor(Player player) {
