@@ -33,6 +33,12 @@ public final class TakeASeatConfigScreen {
 				.setTooltip(Component.literal("Restored to your previous view when you stand up."))
 				.setSaveConsumer(v -> cfg.enableThirdPersonOnSit = v)
 				.build());
+		camera.addEntry(eb.startEnumSelector(Component.literal("Third person view"), TakeASeatConfig.SitView.class, cfg.sitView)
+				.setDefaultValue(TakeASeatConfig.SitView.BACK)
+				.setEnumNameProvider(v -> Component.literal(v == TakeASeatConfig.SitView.FRONT ? "From the front" : "From behind"))
+				.setTooltip(Component.literal("Which side the camera looks at you from when you sit down."))
+				.setSaveConsumer(v -> cfg.sitView = v)
+				.build());
 		camera.addEntry(eb.startBooleanToggle(Component.literal("Lower camera to focus on model"), cfg.enableSitCameraFocus)
 				.setDefaultValue(true)
 				.setSaveConsumer(v -> cfg.enableSitCameraFocus = v)
