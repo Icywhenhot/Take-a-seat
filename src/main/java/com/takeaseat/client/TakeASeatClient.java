@@ -48,7 +48,6 @@ import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.neoforge.client.event.RegisterClientCommandsEvent;
 import net.neoforged.neoforge.client.event.RegisterKeyMappingsEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
-import org.lwjgl.glfw.GLFW;
 
 import java.util.Locale;
 
@@ -89,7 +88,7 @@ public final class TakeASeatClient {
 
 	public static void registerKeyMappings(RegisterKeyMappingsEvent event) {
 		KeyMapping.Category category = KeyMapping.Category.register(TakeASeat.id("sit"));
-		sitKey = new KeyMapping("key.takeaseat.sit", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_X, category);
+		sitKey = new KeyMapping("key.takeaseat.sit", InputConstants.Type.KEYBOARD, InputConstants.KEY_X, category);
 		event.register(sitKey);
 
 		PlayerAnimationFactory.ANIMATION_DATA_FACTORY.registerFactory(SIT_LAYER, 1000,
@@ -414,12 +413,15 @@ public final class TakeASeatClient {
 	}
 
 	private static void setThirdPersonIfEnabled() {
-		if (!TakeASeatConfig.getConfig().enableThirdPersonOnSit) return;
+		TakeASeatConfig cfg = TakeASeatConfig.getConfig();
+		if (!cfg.enableThirdPersonOnSit) return;
 		Minecraft client = Minecraft.getInstance();
 		CameraType current = client.options.getCameraType();
 		if (current == CameraType.FIRST_PERSON) {
 			previousPerspective = current;
-			client.options.setCameraType(CameraType.THIRD_PERSON_BACK);
+			client.options.setCameraType(cfg.sitView == TakeASeatConfig.SitView.FRONT
+					? CameraType.THIRD_PERSON_FRONT
+					: CameraType.THIRD_PERSON_BACK);
 		} else {
 			previousPerspective = null;
 		}
@@ -428,10 +430,14 @@ public final class TakeASeatClient {
 	private static boolean canSit(LocalPlayer player) {
 		return player.onGround()
 				&& !player.isPassenger()
-				&& !player.isInWater()
+				&& (!player.isInWater() || shallowWater(player))
 				&& !player.isSwimming()
 				&& !player.isFallFlying()
 				&& !player.isSleeping();
+	}
+
+	private static boolean shallowWater(LocalPlayer player) {
+		return player.level().getFluidState(player.blockPosition().above()).isEmpty();
 	}
 
 	private static PlayerAnimationController controllerFor(Player player) {
