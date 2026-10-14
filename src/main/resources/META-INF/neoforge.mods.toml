@@ -34,5 +34,12 @@ versionRange="[${pal_version},)"
 ordering="NONE"
 side="BOTH"
 
+[[dependencies.${mod_id}]]
+modId="cloth_config"
+type="optional"
+versionRange="[${cloth_version},)"
+ordering="NONE"
+side="CLIENT"
+
 [[mixins]]
 config="takeaseat.client.mixins.json"
