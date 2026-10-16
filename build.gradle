@@ -1,5 +1,6 @@
 plugins {
-	id 'net.neoforged.moddev' version '2.0.141'
+	id 'net.minecraftforge.gradle' version '6.0.54'
+	id 'org.spongepowered.mixin' version '0.7.38'
 	id 'maven-publish'
 }
 
@@ -11,22 +12,22 @@ base {
 }
 
 tasks.withType(AbstractArchiveTask).configureEach {
-	archiveVersion = "${project.mod_version}-${project.minecraft_version}-neoforge"
+	archiveVersion = "${project.mod_version}-${project.minecraft_version}-forge"
 }
 
 repositories {
 	mavenCentral()
 	maven {
-		name = "NeoForged"
-		url = "https://maven.neoforged.net/releases/"
+		name = "Forge"
+		url = "https://maven.minecraftforge.net/"
 	}
 	maven {
 		name = "Minecraft Libraries"
 		url = "https://libraries.minecraft.net/"
 	}
 	maven {
-		name = "RedlanceMinecraft"
-		url = "https://repo.redlance.org/public"
+		name = "KosmX"
+		url = "https://maven.kosmx.dev/"
 	}
 	maven {
 		name = "Shedaniel"
@@ -34,46 +35,43 @@ repositories {
 	}
 }
 
-neoForge {
-	version = project.neo_version
+minecraft {
+	mappings channel: 'official', version: project.minecraft_version
+	copyIdeResources = true
 
 	runs {
 		client {
-			client()
-			systemProperty "neoforge.enabledGameTestNamespaces", project.mod_id
+			workingDirectory project.file('run')
+			mods {
+				"${project.mod_id}" { source sourceSets.main }
+			}
 		}
 		server {
-			server()
-			systemProperty "neoforge.enabledGameTestNamespaces", project.mod_id
-		}
-	}
-
-	mods {
-		"${project.mod_id}" {
-			sourceSet sourceSets.main
+			workingDirectory project.file('run/server')
+			args '--nogui'
+			mods {
+				"${project.mod_id}" { source sourceSets.main }
+			}
 		}
 	}
 }
 
+mixin {
+	add sourceSets.main, 'takeaseat.refmap.json'
+	config 'takeaseat.client.mixins.json'
+}
+
 dependencies {
-	implementation "net.neoforged:neoforge:${project.neo_version}"
-
-	implementation("com.zigythebird.playeranim:PlayerAnimationLibNeo:${project.pal_version}") {
-		exclude group: "com.google.code.gson"
-		exclude group: "org.slf4j"
-		exclude group: "it.unimi.dsi", module: "fastutil"
-		exclude group: "io.netty"
-		exclude group: "org.joml"
-		exclude group: "org.jetbrains", module: "annotations"
-	}
-
-	implementation "me.shedaniel.cloth:cloth-config-neoforge:${project.cloth_version}"
+	minecraft "net.minecraftforge:forge:${project.minecraft_version}-${project.forge_version}"
+	implementation fg.deobf("dev.kosmx.player-anim:player-animation-lib-forge:${project.playeranim_version}")
+	implementation fg.deobf("me.shedaniel.cloth:cloth-config-forge:${project.cloth_version}")
+	annotationProcessor 'org.spongepowered:mixin:0.8.5:processor'
 }
 
 processResources {
 	inputs.property "version", project.version
 
-	filesMatching("META-INF/neoforge.mods.toml") {
+	filesMatching("META-INF/mods.toml") {
 		expand(
 				minecraft_version: project.minecraft_version,
 				mod_group_id: project.mod_group_id,
@@ -81,24 +79,26 @@ processResources {
 				mod_license: project.mod_license,
 				mod_name: project.mod_name,
 				mod_version: project.mod_version,
-				neo_version: project.neo_version,
-				pal_version: project.pal_version,
+				forge_version: project.forge_version,
+				playeranim_version: project.playeranim_version,
 				cloth_version: project.cloth_version
 		)
 	}
 }
 
 tasks.withType(JavaCompile).configureEach {
-	it.options.release = 21
+	it.options.release = 17
 }
 
 java {
 	withSourcesJar()
 
-	toolchain.languageVersion = JavaLanguageVersion.of(21)
+	toolchain.languageVersion = JavaLanguageVersion.of(17)
 }
 
 jar {
+	manifest.attributes 'MixinConfigs': 'takeaseat.client.mixins.json'
+	finalizedBy 'reobfJar'
 	inputs.property "projectName", project.mod_id
 
 	from("LICENSE") {

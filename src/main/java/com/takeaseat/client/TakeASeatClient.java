@@ -5,11 +5,12 @@ import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.takeaseat.TakeASeat;
 import com.takeaseat.TakeASeatConfig;
-import com.zigythebird.playeranim.animation.PlayerAnimationController;
-import com.zigythebird.playeranim.api.PlayerAnimationAccess;
-import com.zigythebird.playeranim.api.PlayerAnimationFactory;
-import com.zigythebird.playeranimcore.animation.layered.IAnimation;
-import com.zigythebird.playeranimcore.enums.PlayState;
+import dev.kosmx.playerAnim.api.layered.ModifierLayer;
+import dev.kosmx.playerAnim.api.layered.KeyframeAnimationPlayer;
+import dev.kosmx.playerAnim.minecraftApi.PlayerAnimationRegistry;
+import dev.kosmx.playerAnim.minecraftApi.PlayerAnimationAccess;
+import dev.kosmx.playerAnim.minecraftApi.PlayerAnimationFactory;
+import dev.kosmx.playerAnim.api.layered.IAnimation;
 import net.minecraft.client.CameraType;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
@@ -45,10 +46,10 @@ import net.minecraft.world.level.block.state.properties.SlabType;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
-import net.neoforged.neoforge.client.event.ClientTickEvent;
-import net.neoforged.neoforge.client.event.RegisterClientCommandsEvent;
-import net.neoforged.neoforge.client.event.RegisterKeyMappingsEvent;
-import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
+import net.minecraftforge.event.TickEvent;
+import net.minecraftforge.client.event.RegisterClientCommandsEvent;
+import net.minecraftforge.client.event.RegisterKeyMappingsEvent;
+import net.minecraftforge.event.entity.player.PlayerInteractEvent;
 import org.lwjgl.glfw.GLFW;
 
 import java.util.Locale;
@@ -93,8 +94,7 @@ public final class TakeASeatClient {
 		event.register(sitKey);
 
 		PlayerAnimationFactory.ANIMATION_DATA_FACTORY.registerFactory(SIT_LAYER, 1000,
-				player -> new PlayerAnimationController(player,
-						(controller, state, animationSetter) -> PlayState.STOP));
+				player -> new ModifierLayer<IAnimation>());
 	}
 
 	public static void registerClientCommands(RegisterClientCommandsEvent event) {
@@ -135,7 +135,7 @@ public final class TakeASeatClient {
 		if (set == null) return false;
 		LocalPlayer player = Minecraft.getInstance().player;
 		if (player == null || !canSit(player)) return true;
-		PlayerAnimationController controller = controllerFor(player);
+		ModifierLayer<IAnimation> controller = controllerFor(player);
 		if (controller == null) return true;
 		animationState = Math.floorMod(variant - 1, set.length);
 		playAnimation(controller, player, set);
@@ -145,7 +145,7 @@ public final class TakeASeatClient {
 	private static void contextSit() {
 		LocalPlayer player = Minecraft.getInstance().player;
 		if (player == null) return;
-		PlayerAnimationController controller = controllerFor(player);
+		ModifierLayer<IAnimation> controller = controllerFor(player);
 		if (controller != null) {
 			handleSitPress(player, controller);
 		}
@@ -210,7 +210,7 @@ public final class TakeASeatClient {
 		}
 		local.setXRot(0.0F);
 
-		PlayerAnimationController controller = controllerFor(local);
+		ModifierLayer<IAnimation> controller = controllerFor(local);
 		if (controller != null) {
 			animationState = 0;
 			playAnimation(controller, local, STAIRS);
@@ -218,7 +218,8 @@ public final class TakeASeatClient {
 		return InteractionResult.SUCCESS;
 	}
 
-	public static void onClientTick(ClientTickEvent.Post event) {
+	public static void onClientTick(TickEvent.ClientTickEvent event) {
+		if (event.phase != TickEvent.Phase.END) return;
 		Minecraft client = Minecraft.getInstance();
 		LocalPlayer player = client.player;
 		if (player == null || !client.isWindowActive()) {
@@ -231,7 +232,7 @@ public final class TakeASeatClient {
 		boolean moving = in.up || in.down || in.left || in.right || in.jumping || in.shiftKeyDown;
 		if (moving) lastActivityMs = System.currentTimeMillis();
 
-		PlayerAnimationController controller = controllerFor(player);
+		ModifierLayer<IAnimation> controller = controllerFor(player);
 
 		boolean pressedSitThisTick = false;
 		if (sitKey != null && sitKey.consumeClick() && client.screen == null) {
@@ -263,7 +264,7 @@ public final class TakeASeatClient {
 		TakeASeatClientNetworking.reconcile(client);
 	}
 
-	private static void handleSitPress(LocalPlayer player, PlayerAnimationController controller) {
+	private static void handleSitPress(LocalPlayer player, ModifierLayer<IAnimation> controller) {
 		if (!canSit(player)) {
 			TakeASeat.LOGGER.info("[TakeASeat] sit blocked (canSit=false): onGround={} passenger={} inWater={} swimming={} fallFlying={} sleeping={}",
 					player.onGround(), player.isPassenger(), player.isInWater(), player.isSwimming(), player.isFallFlying(), player.isSleeping());
@@ -340,13 +341,13 @@ public final class TakeASeatClient {
 		playAnimation(controller, player, GROUND);
 	}
 
-	private static void playAnimation(PlayerAnimationController controller, LocalPlayer player, ResourceLocation[] animations) {
+	private static void playAnimation(ModifierLayer<IAnimation> controller, LocalPlayer player, ResourceLocation[] animations) {
 		if (controller == null || animations == null || animations.length == 0) return;
 		if (animationState < 0 || animationState >= animations.length) animationState = 0;
 
 		ResourceLocation id = animations[animationState];
 		boolean wasSitting = isSitting;
-		boolean triggered = controller.triggerAnimation(id);
+		boolean triggered = play(controller, id);
 		TakeASeat.LOGGER.info("[TakeASeat] SIT anim={} variantIdx={} wasSitting={} triggerOk={}",
 				id.getPath(), animationState, wasSitting, triggered);
 		if (triggered) {
@@ -362,17 +363,16 @@ public final class TakeASeatClient {
 		}
 	}
 
-	private static void standUp(PlayerAnimationController controller, LocalPlayer player, String reason) {
+	private static void standUp(ModifierLayer<IAnimation> controller, LocalPlayer player, String reason) {
 		if (!isSitting || controller == null) {
 			TakeASeat.LOGGER.debug("[TakeASeat] stand ignored (reason={}): isSitting={} controllerNull={}", reason, isSitting, controller == null);
 			return;
 		}
 
-		boolean clearedTrigger = controller.stopTriggeredAnimation();
-		controller.stop();
+		controller.setAnimation(null);
 		isSitting = false;
 		TakeASeatClientNetworking.sendStopSit(player.getUUID());
-		TakeASeat.LOGGER.info("[TakeASeat] STAND reason={} clearedTrigger={}", reason, clearedTrigger);
+		TakeASeat.LOGGER.info("[TakeASeat] STAND reason={}", reason);
 		if (TakeASeatConfig.getConfig().enableThirdPersonOnSit && previousPerspective != null) {
 			Minecraft.getInstance().options.setCameraType(previousPerspective);
 			previousPerspective = null;
@@ -391,7 +391,7 @@ public final class TakeASeatClient {
 		return sb.toString();
 	}
 
-	private static void runDiagnostics(PlayerAnimationController controller) {
+	private static void runDiagnostics(ModifierLayer<IAnimation> controller) {
 		boolean active = controller != null && controller.isActive();
 		if (active != diagPrevActive) {
 			TakeASeat.LOGGER.info("[TakeASeat][diag] controller.isActive {} -> {} (isSitting={})", diagPrevActive, active, isSitting);
@@ -443,10 +443,18 @@ public final class TakeASeatClient {
 		return player.level().getFluidState(player.blockPosition().above()).isEmpty();
 	}
 
-	private static PlayerAnimationController controllerFor(Player player) {
+	@SuppressWarnings("unchecked")
+	private static ModifierLayer<IAnimation> controllerFor(Player player) {
 		if (!(player instanceof AbstractClientPlayer clientPlayer)) return null;
-		IAnimation layer = PlayerAnimationAccess.getPlayerAnimationLayer(clientPlayer, SIT_LAYER);
-		return layer instanceof PlayerAnimationController controller ? controller : null;
+		IAnimation layer = PlayerAnimationAccess.getPlayerAssociatedData(clientPlayer).get(SIT_LAYER);
+		return layer instanceof ModifierLayer<?> ? (ModifierLayer<IAnimation>) layer : null;
+	}
+
+	public static boolean play(ModifierLayer<IAnimation> controller, ResourceLocation id) {
+		var animation = PlayerAnimationRegistry.getAnimation(id);
+		if (animation == null) return false;
+		controller.setAnimation(new KeyframeAnimationPlayer(animation));
+		return true;
 	}
 
 	public static boolean isSitting() {

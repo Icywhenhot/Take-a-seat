@@ -1,120 +1,108 @@
 package com.takeaseat.network;
 
 import com.takeaseat.TakeASeat;
-import net.minecraft.core.UUIDUtil;
 import com.takeaseat.client.TakeASeatClientNetworking;
-import net.minecraft.network.RegistryFriendlyByteBuf;
-import net.minecraft.network.codec.StreamCodec;
-import net.minecraft.network.protocol.PacketFlow;
-import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
-import net.neoforged.neoforge.event.entity.player.PlayerEvent;
-import net.neoforged.neoforge.event.tick.ServerTickEvent;
-import net.neoforged.neoforge.network.PacketDistributor;
-import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
-import net.neoforged.neoforge.network.handling.IPayloadContext;
-import net.neoforged.neoforge.network.registration.PayloadRegistrar;
+import net.minecraftforge.event.TickEvent;
+import net.minecraftforge.event.entity.player.PlayerEvent;
+import net.minecraftforge.network.NetworkEvent;
+import net.minecraftforge.network.NetworkRegistry;
+import net.minecraftforge.network.PacketDistributor;
+import net.minecraftforge.network.simple.SimpleChannel;
 
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Supplier;
 
 public final class TakeASeatNetworking {
-	public static final ResourceLocation START_SIT_ID = TakeASeat.id("start_sit");
-	public static final ResourceLocation STOP_SIT_ID = TakeASeat.id("stop_sit");
+	public static final SimpleChannel CHANNEL = NetworkRegistry.newSimpleChannel(TakeASeat.id("sitting"),
+			() -> "1", NetworkRegistry.acceptMissingOr("1"), NetworkRegistry.acceptMissingOr("1"));
 
 	private static final Map<UUID, ResourceLocation> SITTING = new ConcurrentHashMap<>();
 
 	private TakeASeatNetworking() {}
 
-	public record StartSitPayload(UUID playerUuid, ResourceLocation animId) implements CustomPacketPayload {
-		public static final Type<StartSitPayload> TYPE = new Type<>(START_SIT_ID);
-		public static final StreamCodec<RegistryFriendlyByteBuf, StartSitPayload> CODEC = StreamCodec.composite(
-				UUIDUtil.STREAM_CODEC, StartSitPayload::playerUuid,
-				ResourceLocation.STREAM_CODEC, StartSitPayload::animId,
-				StartSitPayload::new
-		);
+	public record StartSitPayload(UUID playerUuid, ResourceLocation animId) {
+		private static StartSitPayload decode(FriendlyByteBuf buf) {
+			return new StartSitPayload(buf.readUUID(), buf.readResourceLocation());
+		}
 
-		@Override
-		public Type<? extends CustomPacketPayload> type() {
-			return TYPE;
+		private void encode(FriendlyByteBuf buf) {
+			buf.writeUUID(playerUuid);
+			buf.writeResourceLocation(animId);
 		}
 	}
 
-	public record StopSitPayload(UUID playerUuid) implements CustomPacketPayload {
-		public static final Type<StopSitPayload> TYPE = new Type<>(STOP_SIT_ID);
-		public static final StreamCodec<RegistryFriendlyByteBuf, StopSitPayload> CODEC = StreamCodec.composite(
-				UUIDUtil.STREAM_CODEC, StopSitPayload::playerUuid,
-				StopSitPayload::new
-		);
+	public record StopSitPayload(UUID playerUuid) {
+		private static StopSitPayload decode(FriendlyByteBuf buf) {
+			return new StopSitPayload(buf.readUUID());
+		}
 
-		@Override
-		public Type<? extends CustomPacketPayload> type() {
-			return TYPE;
+		private void encode(FriendlyByteBuf buf) {
+			buf.writeUUID(playerUuid);
 		}
 	}
 
-	public static void registerPayloadHandlers(RegisterPayloadHandlersEvent event) {
-		PayloadRegistrar registrar = event.registrar("1").optional();
-		registrar.playBidirectional(StartSitPayload.TYPE, StartSitPayload.CODEC, (payload, context) -> {
-			if (context.flow() == PacketFlow.CLIENTBOUND) {
-				TakeASeatClientNetworking.handleStartSit(payload, context);
-			} else {
-				handleStartSit(payload, context);
-			}
-		});
-		registrar.playBidirectional(StopSitPayload.TYPE, StopSitPayload.CODEC, (payload, context) -> {
-			if (context.flow() == PacketFlow.CLIENTBOUND) {
-				TakeASeatClientNetworking.handleStopSit(payload, context);
-			} else {
-				handleStopSit(payload, context);
-			}
-		});
+	public static void register() {
+		CHANNEL.registerMessage(0, StartSitPayload.class, StartSitPayload::encode, StartSitPayload::decode, TakeASeatNetworking::handleStartSit);
+		CHANNEL.registerMessage(1, StopSitPayload.class, StopSitPayload::encode, StopSitPayload::decode, TakeASeatNetworking::handleStopSit);
 	}
 
-	private static void handleStartSit(StartSitPayload payload, IPayloadContext context) {
+	private static void handleStartSit(StartSitPayload payload, Supplier<NetworkEvent.Context> ctx) {
+		NetworkEvent.Context context = ctx.get();
 		context.enqueueWork(() -> {
-			if (!(context.player() instanceof ServerPlayer sender)) {
+			if (context.getDirection().getReceptionSide().isClient()) {
+				TakeASeatClientNetworking.handleStartSit(payload);
 				return;
 			}
+			ServerPlayer sender = context.getSender();
+			if (sender == null || !sender.getUUID().equals(payload.playerUuid())) return;
 			SITTING.put(payload.playerUuid(), payload.animId());
-			TakeASeat.LOGGER.info("[TakeASeat][server] StartSit from {} anim={} — rebroadcasting to all players",
-					sender.getName().getString(), payload.animId().getPath());
-			PacketDistributor.sendToAllPlayers(payload);
+			for (ServerPlayer player : sender.server.getPlayerList().getPlayers()) {
+				sendToPlayer(player, payload);
+			}
 		});
+		context.setPacketHandled(true);
 	}
 
-	private static void handleStopSit(StopSitPayload payload, IPayloadContext context) {
+	private static void handleStopSit(StopSitPayload payload, Supplier<NetworkEvent.Context> ctx) {
+		NetworkEvent.Context context = ctx.get();
 		context.enqueueWork(() -> {
-			if (!(context.player() instanceof ServerPlayer sender)) {
+			if (context.getDirection().getReceptionSide().isClient()) {
+				TakeASeatClientNetworking.handleStopSit(payload);
 				return;
 			}
+			ServerPlayer sender = context.getSender();
+			if (sender == null || !sender.getUUID().equals(payload.playerUuid())) return;
 			SITTING.remove(payload.playerUuid());
-			TakeASeat.LOGGER.info("[TakeASeat][server] StopSit from {} — rebroadcasting to all players",
-					sender.getName().getString());
-			PacketDistributor.sendToAllPlayers(payload);
+			for (ServerPlayer player : sender.server.getPlayerList().getPlayers()) {
+				sendToPlayer(player, payload);
+			}
 		});
+		context.setPacketHandled(true);
+	}
+
+	private static void sendToPlayer(ServerPlayer player, Object payload) {
+		if (CHANNEL.isRemotePresent(player.connection.connection)) {
+			CHANNEL.send(PacketDistributor.PLAYER.with(() -> player), payload);
+		}
 	}
 
 	public static void onPlayerLoggedIn(PlayerEvent.PlayerLoggedInEvent event) {
-		if (!(event.getEntity() instanceof ServerPlayer joined)) {
-			return;
-		}
+		if (!(event.getEntity() instanceof ServerPlayer joined)) return;
 		for (Map.Entry<UUID, ResourceLocation> entry : SITTING.entrySet()) {
-			if (entry.getKey().equals(joined.getUUID())) {
-				continue;
-			}
-			PacketDistributor.sendToPlayer(joined, new StartSitPayload(entry.getKey(), entry.getValue()));
+			if (entry.getKey().equals(joined.getUUID())) continue;
+			sendToPlayer(joined, new StartSitPayload(entry.getKey(), entry.getValue()));
 		}
 	}
 
-	public static void onServerTick(ServerTickEvent.Post event) {
-		MinecraftServer server = event.getServer();
-		if (server == null || SITTING.isEmpty()) {
-			return;
-		}
+	public static void onServerTick(TickEvent.ServerTickEvent event) {
+		if (event.phase != TickEvent.Phase.END) return;
+		var server = event.getServer();
+		if (server == null || SITTING.isEmpty()) return;
 		var online = server.getPlayerList().getPlayers();
 		SITTING.keySet().removeIf(uuid -> online.stream().noneMatch(player -> player.getUUID().equals(uuid)));
 	}

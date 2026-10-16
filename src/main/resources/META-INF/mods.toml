@@ -1,8 +1,6 @@
 modLoader="javafml"
-loaderVersion="[1,)"
+loaderVersion="[47,)"
 license="${mod_license}"
-showAsResourcePack=false
-showAsDataPack=false
 
 [[mods]]
 modId="${mod_id}"
@@ -14,32 +12,30 @@ logoFile="assets/takeaseat/icon.png"
 displayTest="IGNORE_ALL_VERSION"
 
 [[dependencies.${mod_id}]]
-modId="neoforge"
-type="required"
-versionRange="[21.1.235,)"
+modId="forge"
+mandatory=true
+versionRange="[${forge_version},)"
 ordering="NONE"
 side="BOTH"
 
 [[dependencies.${mod_id}]]
 modId="minecraft"
-type="required"
-versionRange="[${minecraft_version},)"
+mandatory=true
+versionRange="[1.20.1,1.20.2)"
 ordering="NONE"
 side="BOTH"
 
 [[dependencies.${mod_id}]]
-modId="player_animation_library"
-type="required"
-versionRange="[${pal_version},)"
+modId="playeranimator"
+mandatory=true
+versionRange="[${playeranim_version},)"
 ordering="NONE"
 side="BOTH"
 
 [[dependencies.${mod_id}]]
 modId="cloth_config"
-type="optional"
+mandatory=false
 versionRange="[${cloth_version},)"
 ordering="NONE"
 side="CLIENT"
 
-[[mixins]]
-config="takeaseat.client.mixins.json"

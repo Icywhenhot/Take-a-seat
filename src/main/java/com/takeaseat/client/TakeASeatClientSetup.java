@@ -1,12 +1,12 @@
 package com.takeaseat.client;
 
 import com.takeaseat.TakeASeat;
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.common.EventBusSubscriber;
-import net.neoforged.neoforge.client.event.RegisterKeyMappingsEvent;
+import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.minecraftforge.fml.common.Mod.EventBusSubscriber;
+import net.minecraftforge.client.event.RegisterKeyMappingsEvent;
 
-@EventBusSubscriber(modid = TakeASeat.MOD_ID, value = Dist.CLIENT)
+@EventBusSubscriber(modid = TakeASeat.MOD_ID, value = Dist.CLIENT, bus = EventBusSubscriber.Bus.MOD)
 public final class TakeASeatClientSetup {
 	private TakeASeatClientSetup() {}
 

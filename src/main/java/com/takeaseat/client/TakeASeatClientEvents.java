@@ -1,19 +1,19 @@
 package com.takeaseat.client;
 
 import com.takeaseat.TakeASeat;
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.common.EventBusSubscriber;
-import net.neoforged.neoforge.client.event.ClientTickEvent;
-import net.neoforged.neoforge.client.event.RegisterClientCommandsEvent;
-import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
+import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.minecraftforge.fml.common.Mod.EventBusSubscriber;
+import net.minecraftforge.event.TickEvent;
+import net.minecraftforge.client.event.RegisterClientCommandsEvent;
+import net.minecraftforge.event.entity.player.PlayerInteractEvent;
 
 @EventBusSubscriber(modid = TakeASeat.MOD_ID, value = Dist.CLIENT)
 public final class TakeASeatClientEvents {
 	private TakeASeatClientEvents() {}
 
 	@SubscribeEvent
-	public static void onClientTick(ClientTickEvent.Post event) {
+	public static void onClientTick(TickEvent.ClientTickEvent event) {
 		TakeASeatClient.onClientTick(event);
 	}
 

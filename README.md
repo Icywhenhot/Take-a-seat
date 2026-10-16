@@ -4,9 +4,8 @@ Sit, lounge, and relax. Press a key and Take a Seat plays a **context-aware sitt
 player — it figures out *what* you're near or holding and picks a fitting pose, then keeps your model
 in frame with a smooth camera. Other players see you sitting too (when they also have the mod).
 
-Take a Seat is a from-scratch rebuild of the discontinued **Sitting Plus** for Minecraft **1.21.10**, running
-on the [Player Animation Library](https://modrinth.com/mod/player-animation-library) backend and ported to
-NeoForge.
+Take a Seat is a from-scratch rebuild of the discontinued **Sitting Plus**, ported to Minecraft
+**1.20.1 Forge** with the [Player Animator](https://modrinth.com/mod/playeranimator) backend.
 
 > These are *cosmetic* animations. You don't actually mount the block — your model poses in place, and
 > moving stands you back up.
@@ -17,9 +16,10 @@ NeoForge.
 
 | Mod | Version |
 |---|---|
-| Minecraft | 1.21.1 |
-| NeoForge | 21.1.235+ |
-| Player Animation Library | 1.1.4+mc.1.21.1 or newer (install separately) |
+| Minecraft | 1.20.1 |
+| Forge | 47.4.10+ |
+| Player Animator | 1.0.2-rc1+1.20 (install separately) |
+| Cloth Config | 11.1.136+ (optional, enables the config screen) |
 
 ---
 
@@ -73,7 +73,7 @@ That's **20 hand-made animations** in total, cycled per category by tapping the 
 
 ## Configuration
 
-The old in-game config screen is not wired into this NeoForge port yet, so edit the JSON file directly.
+With Cloth Config installed, open **Mods → Take a Seat → Config** to change settings in-game.
 
 Edit `config/TakeASeatConfig.json` (created on first launch):
 
@@ -81,6 +81,7 @@ Edit `config/TakeASeatConfig.json` (created on first launch):
 |---|---|---|
 | `enableClickToSit` | `true` | Right-click stairs with an empty hand to sit on them. |
 | `enableThirdPersonOnSit` | `true` | Switch to third person while sitting. |
+| `sitView` | `BACK` | Use `BACK` or `FRONT` when switching to third person. |
 | `enableSitCameraFocus` | `true` | Smoothly lower the camera to focus on the seated model. |
 | `cameraFocusOffset` | `0.55` | How far (blocks) to lower the camera while sitting. |
 | `onlyLowerCameraInFirstPerson` | `false` | Only apply the camera lower in first person. |
@@ -99,7 +100,7 @@ to you automatically (no need for them to re-sit).
 ## For datapack / modpack makers
 
 Make any block sittable (it'll use the chair pose) by adding it to the **`#takeaseat:sittable`** block tag —
-create `data/<your_pack>/tags/block/sittable.json`:
+create `data/takeaseat/tags/blocks/sittable.json`:
 
 ```json
 { "replace": false, "values": ["mymod:fancy_chair", "minecraft:lectern"] }
@@ -115,8 +116,8 @@ Bottom slabs and carpets are recognized automatically, so you only need the tag 
 ./gradlew build
 ```
 
-The mod sources target **Java 21** (Mojang ships Java 21 to players in 1.21.10); the Gradle build will
-auto-provision a JDK 21 toolchain via the foojay resolver if one isn't installed. The output jar lands
+The mod sources target **Java 17**; the Gradle build will
+auto-provision a JDK 17 toolchain via the foojay resolver if one isn't installed. The output jar lands
 in `build/libs/`. To test in-game: `./gradlew runClient`.
 
 ---
@@ -124,4 +125,4 @@ in `build/libs/`. To test in-game: `./gradlew runClient`.
 ## Credits
 
 - Original concept & animations: **Sitting Plus** by saltywater (ported here with permission).
-- Animation backend: **Player Animation Library** by ZigyTheBird (MIT).
+- Animation backend: **Player Animator** by KosmX (MIT).
